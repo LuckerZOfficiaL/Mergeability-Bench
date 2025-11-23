@@ -115,6 +115,7 @@ def run(cfg: DictConfig) -> str:
 
     pylogger.info(f"Number of tasks: {cfg.num_tasks}")
     pylogger.info(f"Finetuned models: {list(finetuned_models.keys())}")
+    pylogger.info(f"Using merger: {cfg.merger._target_}")
 
     merger = instantiate(cfg.merger)
 

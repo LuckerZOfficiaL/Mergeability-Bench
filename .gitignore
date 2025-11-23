@@ -226,7 +226,18 @@ cache_dvc/
 
 # PROJECT SPECIFIC
 wandb/
-wandb/** 
+wandb/**
 storage/**
-models/** 
-**/models/**
+models/**
+
+# Checkpoints and cache
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+checkpoints/
+cache/
+.cache/
+outputs/
+modelssvd_dict_*

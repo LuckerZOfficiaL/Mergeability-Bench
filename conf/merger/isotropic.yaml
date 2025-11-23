@@ -1,4 +1,4 @@
-_target_: model_merging.merger.isotropic.IsotropicMerger
+_target_: model_merging.merger.isotropic_merger.IsotropicMerger
 
 optimal_alphas:
   ViT-B-32:
@@ -15,5 +15,5 @@ optimal_alphas:
     20: 1.00
 
 svd_path: "${oc.env:MODELS_PATH}svd_dict_${nn.encoder.model_name}.pt"
-svd_compress_factor: null 
-device: ${device}
+svd_compress_factor: null
+model_name: ${nn.encoder.model_name}

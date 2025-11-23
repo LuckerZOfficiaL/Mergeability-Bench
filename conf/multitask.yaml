@@ -1,7 +1,7 @@
 core:
   project_name: model_merging
   storage_dir: ${oc.env:PROJECT_ROOT}/storage
-  entity: gladia
+  entity: lzhou00-sapienza-universit-di-roma
   version: 0.0.1
   tags: 
   - dev
@@ -10,8 +10,8 @@ defaults:
   - hydra: default
   - nn: default
   - train: default
-  - merger: tsv # iso-c, consensus
-  - benchmark: N20 # N14, N8
+  - merger: weight_avg # iso-c, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
+  - benchmark: N8 # N14, N8
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
   - override hydra/hydra_logging: none

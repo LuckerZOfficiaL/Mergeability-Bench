@@ -41,7 +41,7 @@ logging:
     _target_: lightning.pytorch.loggers.WandbLogger
 
     project: ${core.project_name}
-    entity: gladia
+    entity: lzhou00
     log_model: false
     mode: 'online'
     tags: ${core.tags}

@@ -7,7 +7,7 @@ from model_merging.utils.utils import (
     compute_task_dict,
     print_memory,
 )
-from model_merging.task_vectors.task_singular_vectors import (
+from model_merging.merging.structured import (
     get_svd_dict,
     isotropic_sum,
 )
@@ -19,12 +19,13 @@ pylogger = logging.getLogger(__name__)
 
 class IsotropicMerger(TaskVectorBasedMerger):
 
-    def __init__(self, optimal_alphas, svd_path, svd_compress_factor):
+    def __init__(self, optimal_alphas, svd_path, svd_compress_factor, model_name):
         super().__init__()
 
         self.optimal_alphas = optimal_alphas
         self.svd_path = svd_path
         self.svd_compress_factor = svd_compress_factor
+        self.model_name = model_name
 
     @torch.no_grad()
     def merge(self, base_model, finetuned_models):
@@ -51,10 +52,11 @@ class IsotropicMerger(TaskVectorBasedMerger):
             svd_dict=svd_dict,
         )
 
-        model_name = self.cfg.nn.module.encoder.model_name
+        model_name = self.model_name
 
-        num_tasks = len(finetuned_models)
+        num_tasks = len(datasets)
 
+        coefficient = 1.0  # default
         if (
             model_name in self.optimal_alphas
             and num_tasks in self.optimal_alphas[model_name]

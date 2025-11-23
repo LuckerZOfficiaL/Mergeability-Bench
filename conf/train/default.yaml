@@ -53,7 +53,7 @@ logging:
     _target_: lightning.pytorch.loggers.WandbLogger
 
     project: ${core.project_name}
-    entity: gladia
+    entity: lzhou00-sapienza-universit-di-roma
     log_model: false
     mode: 'online'
     tags: ${core.tags}
