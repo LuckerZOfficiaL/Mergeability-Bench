@@ -51,6 +51,66 @@ def get_layer_vectors(
 
 
 # =============================================================================
+# Per-Layer Computation Wrapper
+# =============================================================================
+
+
+def compute_metric_per_layer(
+    metric_fn: Callable,
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> Dict[str, float]:
+    """Compute any metric for each layer separately.
+
+    Args:
+        metric_fn: A metric function that takes two task dicts and returns a float.
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Dictionary mapping layer names to metric values.
+    """
+    layers_1 = get_layer_vectors(task_dict_1)
+    layers_2 = get_layer_vectors(task_dict_2)
+
+    result = {}
+    common_keys = set(layers_1.keys()) & set(layers_2.keys())
+
+    for key in sorted(common_keys):
+        # Create single-layer task dicts
+        layer_dict_1 = {key: task_dict_1[key]}
+        layer_dict_2 = {key: task_dict_2[key]}
+        try:
+            result[key] = metric_fn(layer_dict_1, layer_dict_2)
+        except Exception:
+            result[key] = float('nan')
+
+    return result
+
+
+def compute_metric_layer_wise_avg(
+    metric_fn: Callable,
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute average of a metric across all layers.
+
+    Args:
+        metric_fn: A metric function that takes two task dicts and returns a float.
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Average metric value across layers.
+    """
+    per_layer = compute_metric_per_layer(metric_fn, task_dict_1, task_dict_2)
+    valid_values = [v for v in per_layer.values() if not math.isnan(v)]
+    if not valid_values:
+        return 0.0
+    return sum(valid_values) / len(valid_values)
+
+
+# =============================================================================
 # Core Metrics
 # =============================================================================
 
@@ -142,43 +202,6 @@ def weight_space_angle(
     cos_sim = max(-1.0, min(1.0, cos_sim))
     angle_rad = math.acos(cos_sim)
     return math.degrees(angle_rad)
-
-
-def per_layer_cosine_similarity(
-    task_dict_1: Dict[str, torch.Tensor],
-    task_dict_2: Dict[str, torch.Tensor],
-) -> Dict[str, float]:
-    """Compute cosine similarity for each layer separately.
-
-    This provides a fine-grained view of where task vectors agree or disagree.
-    Some layers might be more important for merging compatibility.
-
-    Args:
-        task_dict_1: First task vector.
-        task_dict_2: Second task vector.
-
-    Returns:
-        Dictionary mapping layer names to cosine similarity values.
-    """
-    layers_1 = get_layer_vectors(task_dict_1)
-    layers_2 = get_layer_vectors(task_dict_2)
-
-    result = {}
-    common_keys = set(layers_1.keys()) & set(layers_2.keys())
-
-    for key in sorted(common_keys):
-        vec1 = layers_1[key]
-        vec2 = layers_2[key]
-
-        # Handle zero vectors
-        norm1 = torch.norm(vec1)
-        norm2 = torch.norm(vec2)
-        if norm1 < 1e-8 or norm2 < 1e-8:
-            result[key] = 0.0
-        else:
-            result[key] = F.cosine_similarity(vec1.unsqueeze(0), vec2.unsqueeze(0)).item()
-
-    return result
 
 
 def task_vector_magnitude_ratio(
@@ -334,12 +357,12 @@ def subspace_overlap(
 # =============================================================================
 
 
+# Update this registry when you add new metrics!
 METRIC_REGISTRY: Dict[str, Callable] = {
     "task_vector_cosine_similarity": task_vector_cosine_similarity,
     "task_vector_l2_distance": task_vector_l2_distance,
     "task_vector_dot_product": task_vector_dot_product,
     "weight_space_angle": weight_space_angle,
-    "per_layer_cosine_similarity": per_layer_cosine_similarity,
     "task_vector_magnitude_ratio": task_vector_magnitude_ratio,
     "singular_value_overlap": singular_value_overlap,
     "subspace_overlap": subspace_overlap,
@@ -376,27 +399,31 @@ def compute_metric(
 def compute_all_metrics(
     task_dict_1: Dict[str, torch.Tensor],
     task_dict_2: Dict[str, torch.Tensor],
-    include_per_layer: bool = False,
+    layer_wise: bool = False,
 ) -> Dict[str, Union[float, Dict[str, float]]]:
     """Compute all registered metrics.
 
     Args:
         task_dict_1: First task vector.
         task_dict_2: Second task vector.
-        include_per_layer: Whether to include per-layer metrics.
+        layer_wise: If True, compute all metrics per-layer and return both
+                   per-layer breakdown and average.
 
     Returns:
         Dictionary mapping metric names to their values.
+        If layer_wise=True, each metric has {"per_layer": {...}, "avg": float}
     """
     results = {}
 
     for name, func in METRIC_REGISTRY.items():
-        # Skip per-layer if not requested
-        if name == "per_layer_cosine_similarity" and not include_per_layer:
-            continue
-
         try:
-            results[name] = func(task_dict_1, task_dict_2)
+            if layer_wise:
+                per_layer = compute_metric_per_layer(func, task_dict_1, task_dict_2)
+                valid_values = [v for v in per_layer.values() if not math.isnan(v)]
+                avg = sum(valid_values) / len(valid_values) if valid_values else 0.0
+                results[name] = {"per_layer": per_layer, "avg": avg}
+            else:
+                results[name] = func(task_dict_1, task_dict_2)
         except Exception as e:
             print(f"Warning: Failed to compute {name}: {e}")
             results[name] = None

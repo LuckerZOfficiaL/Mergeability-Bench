@@ -29,6 +29,7 @@ from model_merging.metrics import (
     METRIC_REGISTRY,
     compute_metric,
     compute_all_metrics,
+    compute_metric_per_layer,
 )
 from model_merging.utils.io_utils import load_model_from_hf
 from model_merging.utils.utils import compute_task_dict, print_memory
@@ -86,11 +87,11 @@ def run(cfg: DictConfig) -> Dict:
     # Determine which metrics to compute
     metrics_to_compute = list(cfg.mergeability.metrics)
     if metrics_to_compute == ["all"]:
-        metrics_to_compute = [k for k in METRIC_REGISTRY.keys() if k != "per_layer_cosine_similarity"]
-        if cfg.mergeability.save_per_layer:
-            metrics_to_compute.append("per_layer_cosine_similarity")
+        metrics_to_compute = list(METRIC_REGISTRY.keys())
 
+    layer_wise = cfg.mergeability.get("layer_wise", False)
     pylogger.info(f"Computing metrics: {metrics_to_compute}")
+    pylogger.info(f"Layer-wise mode: {layer_wise}")
 
     # Initialize results structure
     # For each metric, we store an NxN matrix (upper triangular)
@@ -98,20 +99,19 @@ def run(cfg: DictConfig) -> Dict:
         "model_name": cfg.nn.encoder.model_name,
         "datasets": dataset_names,
         "n_datasets": n_datasets,
+        "layer_wise": layer_wise,
         "metrics": {},
     }
 
     # Initialize matrices for each metric
     for metric_name in metrics_to_compute:
-        if metric_name == "per_layer_cosine_similarity":
-            # Per-layer metrics stored differently
-            results["metrics"][metric_name] = {}
-        else:
-            # Initialize NxN matrix with None (will be upper triangular)
-            results["metrics"][metric_name] = {
-                "matrix": [[None for _ in range(n_datasets)] for _ in range(n_datasets)],
-                "pairs": {},  # Also store as dict for easy lookup
-            }
+        # Initialize NxN matrix with None (will be upper triangular)
+        results["metrics"][metric_name] = {
+            "matrix": [[None for _ in range(n_datasets)] for _ in range(n_datasets)],
+            "pairs": {},  # Also store as dict for easy lookup
+        }
+        if layer_wise:
+            results["metrics"][metric_name]["per_layer"] = {}
 
     # Compute pairwise metrics
     n_pairs = n_datasets * (n_datasets - 1) // 2
@@ -128,31 +128,41 @@ def run(cfg: DictConfig) -> Dict:
 
             for metric_name in metrics_to_compute:
                 try:
-                    metric_value = compute_metric(
-                        metric_name,
-                        task_dicts[name_i],
-                        task_dicts[name_j],
-                    )
+                    metric_fn = METRIC_REGISTRY[metric_name]
 
-                    if metric_name == "per_layer_cosine_similarity":
-                        results["metrics"][metric_name][pair_key] = metric_value
+                    if layer_wise:
+                        # Compute per-layer and average
+                        per_layer_values = compute_metric_per_layer(
+                            metric_fn,
+                            task_dicts[name_i],
+                            task_dicts[name_j],
+                        )
+                        import math
+                        valid_values = [v for v in per_layer_values.values() if not math.isnan(v)]
+                        avg_value = sum(valid_values) / len(valid_values) if valid_values else 0.0
+
+                        # Store average in matrix
+                        results["metrics"][metric_name]["matrix"][i][j] = avg_value
+                        results["metrics"][metric_name]["pairs"][pair_key] = avg_value
+                        # Store per-layer breakdown
+                        results["metrics"][metric_name]["per_layer"][pair_key] = per_layer_values
                     else:
-                        # Store in matrix (upper triangular)
+                        # Normal aggregate computation
+                        metric_value = metric_fn(task_dicts[name_i], task_dicts[name_j])
                         results["metrics"][metric_name]["matrix"][i][j] = metric_value
-                        # Also store in pairs dict for easy lookup
                         results["metrics"][metric_name]["pairs"][pair_key] = metric_value
 
                 except Exception as e:
                     pylogger.error(f"Failed to compute {metric_name} for {pair_key}: {e}")
-                    if metric_name != "per_layer_cosine_similarity":
-                        results["metrics"][metric_name]["matrix"][i][j] = None
-                        results["metrics"][metric_name]["pairs"][pair_key] = None
+                    results["metrics"][metric_name]["matrix"][i][j] = None
+                    results["metrics"][metric_name]["pairs"][pair_key] = None
 
     # Save results
     output_path = Path(cfg.mergeability.output_path)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    output_file = output_path / f"pairwise_metrics_{n_datasets}tasks.json"
+    datasets_suffix = "_".join(dataset_names)
+    output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}.json"
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
@@ -167,26 +177,24 @@ def run(cfg: DictConfig) -> Dict:
     pylogger.info("")
 
     for metric_name in metrics_to_compute:
-        if metric_name == "per_layer_cosine_similarity":
-            pylogger.info(f"{metric_name}: <per-layer data for {n_pairs} pairs>")
-        else:
-            pylogger.info(f"{metric_name}:")
-            # Print matrix in a readable format
-            matrix = results["metrics"][metric_name]["matrix"]
-            # Header
-            header = "          " + "  ".join(f"{name[:8]:>8}" for name in dataset_names)
-            pylogger.info(header)
-            for i, name in enumerate(dataset_names):
-                row_values = []
-                for j in range(n_datasets):
-                    if j <= i:
-                        row_values.append("    -   ")
-                    elif matrix[i][j] is not None:
-                        row_values.append(f"{matrix[i][j]:8.4f}")
-                    else:
-                        row_values.append("   None ")
-                pylogger.info(f"{name[:8]:>8}  " + "  ".join(row_values))
-            pylogger.info("")
+        suffix = " (layer-wise avg)" if layer_wise else ""
+        pylogger.info(f"{metric_name}{suffix}:")
+        # Print matrix in a readable format
+        matrix = results["metrics"][metric_name]["matrix"]
+        # Header
+        header = "          " + "  ".join(f"{name[:8]:>8}" for name in dataset_names)
+        pylogger.info(header)
+        for i, name in enumerate(dataset_names):
+            row_values = []
+            for j in range(n_datasets):
+                if j <= i:
+                    row_values.append("    -   ")
+                elif matrix[i][j] is not None:
+                    row_values.append(f"{matrix[i][j]:8.4f}")
+                else:
+                    row_values.append("   None ")
+            pylogger.info(f"{name[:8]:>8}  " + "  ".join(row_values))
+        pylogger.info("")
 
     return results
 

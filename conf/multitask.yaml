@@ -44,9 +44,7 @@ mergeability:
   datasets:
     - MNIST
     - Cars
-    - PCAM
-  metrics: # see options in ./src/model_merging/metrics/mergeability.py
-    - task_vector_cosine_similarity 
-    - task_vector_l2_distance
+  metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
+    - all
+  layer_wise: true  # If true, compute all metrics per-layer (saves full breakdown, logs average)
   output_path: "${oc.env:PROJECT_ROOT}/results/mergeability/${nn.encoder.model_name}/"
-  save_per_layer: false  # Whether to save per-layer breakdown of metrics
