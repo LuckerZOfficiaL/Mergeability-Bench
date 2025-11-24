@@ -276,7 +276,11 @@ def run(cfg: DictConfig):
     results_path = Path(cfg.misc.results_path)
     results_path.mkdir(parents=True, exist_ok=True)
 
-    summary_file = results_path / "all_pairwise_summary.json"
+    # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
+    merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
+    # Get benchmark name from config (e.g., "N8", "N20")
+    benchmark_name = cfg.benchmark.get("name", f"N{n_datasets}")
+    summary_file = results_path / f"all_pairwise_summary_{benchmark_name}_{merger_name}.json"
     with open(summary_file, "w+") as f:
         json.dump(all_results, f, indent=4)
 

@@ -11,7 +11,7 @@ defaults:
   - nn: default
   - train: default
   - merger: weight_avg # iso-c, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
-  - benchmark: N8 # N14, N8, N20
+  - benchmark: N20 # N14, N8, N20
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
   - override hydra/hydra_logging: none
@@ -53,7 +53,7 @@ mergeability:
   # benchmark_name: null  # or "custom_2tasks"
 
   # OPTION 2: Use a benchmark (e.g., N2, N8, N14, N20) from ./conf/benchmark
-  benchmark_name: N8  # Used for output filename
+  benchmark_name: N20  # Used for output filename
   datasets: ${benchmark_datasets:${mergeability.benchmark_name}}
 
   metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
