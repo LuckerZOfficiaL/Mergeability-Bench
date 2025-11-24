@@ -1,0 +1,40 @@
+{
+  "model_name": "ViT-B-32",
+  "datasets": [
+    "MNIST",
+    "Cars"
+  ],
+  "n_datasets": 2,
+  "metrics": {
+    "task_vector_cosine_similarity": {
+      "matrix": [
+        [
+          null,
+          0.04087869077920914
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "pairs": {
+        "MNIST__Cars": 0.04087869077920914
+      }
+    },
+    "task_vector_l2_distance": {
+      "matrix": [
+        [
+          null,
+          4.228717803955078
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "pairs": {
+        "MNIST__Cars": 4.228717803955078
+      }
+    }
+  }
+}

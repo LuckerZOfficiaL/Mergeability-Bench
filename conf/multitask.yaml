@@ -11,7 +11,7 @@ defaults:
   - nn: default
   - train: default
   - merger: weight_avg # iso-c, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
-  - benchmark: N8 # N14, N8
+  - benchmark: N2 # N14, N8
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
   - override hydra/hydra_logging: none
@@ -38,3 +38,15 @@ misc:
   svd_path: "${oc.env:MODELS_PATH}/svd_dict_${nn.encoder.model_name}.pt"
   finetuned_accuracy_path: "${oc.env:PROJECT_ROOT}/results/finetuning/accs.json"
   results_path: "${oc.env:PROJECT_ROOT}/results/${nn.encoder.model_name}/"
+
+# Mergeability metrics configuration
+mergeability:
+  datasets:
+    - MNIST
+    - Cars
+    - PCAM
+  metrics: # see options in ./src/model_merging/metrics/mergeability.py
+    - task_vector_cosine_similarity 
+    - task_vector_l2_distance
+  output_path: "${oc.env:PROJECT_ROOT}/results/mergeability/${nn.encoder.model_name}/"
+  save_per_layer: false  # Whether to save per-layer breakdown of metrics

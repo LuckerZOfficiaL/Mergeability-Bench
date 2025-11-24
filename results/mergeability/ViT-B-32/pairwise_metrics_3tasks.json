@@ -1,0 +1,59 @@
+{
+  "model_name": "ViT-B-32",
+  "datasets": [
+    "MNIST",
+    "Cars",
+    "PCAM"
+  ],
+  "n_datasets": 3,
+  "metrics": {
+    "task_vector_cosine_similarity": {
+      "matrix": [
+        [
+          null,
+          0.04087869077920914,
+          0.05222421512007713
+        ],
+        [
+          null,
+          null,
+          0.028694158419966698
+        ],
+        [
+          null,
+          null,
+          null
+        ]
+      ],
+      "pairs": {
+        "MNIST__Cars": 0.04087869077920914,
+        "MNIST__PCAM": 0.05222421512007713,
+        "Cars__PCAM": 0.028694158419966698
+      }
+    },
+    "task_vector_l2_distance": {
+      "matrix": [
+        [
+          null,
+          4.228717803955078,
+          4.544361114501953
+        ],
+        [
+          null,
+          null,
+          4.703987121582031
+        ],
+        [
+          null,
+          null,
+          null
+        ]
+      ],
+      "pairs": {
+        "MNIST__Cars": 4.228717803955078,
+        "MNIST__PCAM": 4.544361114501953,
+        "Cars__PCAM": 4.703987121582031
+      }
+    }
+  }
+}
