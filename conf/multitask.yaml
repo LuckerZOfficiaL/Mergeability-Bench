@@ -41,10 +41,17 @@ misc:
 
 # Mergeability metrics configuration
 mergeability:
-  datasets:
-    - MNIST
-    - Cars
+  # OPTION 1: List datasets explicitly (set benchmark_name to null or a custom name)
+  # datasets:
+  #   - MNIST
+  #   - Cars
+  # benchmark_name: null  # or "custom_2tasks"
+
+  # OPTION 2: Use a benchmark (e.g., N2, N8, N14, N20) from ./conf/benchmark
+  benchmark_name: N8  # Used for output filename
+  datasets: ${benchmark_datasets:${mergeability.benchmark_name}}
+
   metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
     - all
-  layer_wise: true  # If true, compute all metrics per-layer (saves full breakdown, logs average)
+  layer_wise: false  # If true, compute all metrics per-layer (saves full breakdown, logs average)
   output_path: "${oc.env:PROJECT_ROOT}/results/mergeability/${nn.encoder.model_name}/"

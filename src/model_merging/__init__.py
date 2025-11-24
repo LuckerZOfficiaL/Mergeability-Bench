@@ -64,4 +64,24 @@ def dataset_resolver(dataset_name: str):  # NOQA
     return dataset_cfg
 
 
+def benchmark_datasets_resolver(benchmark_name: str):  # NOQA
+    """Load a benchmark config and extract just the dataset names.
+
+    Args:
+        benchmark_name: Name of the benchmark (e.g., "N2", "N8", "N20")
+
+    Returns:
+        List of dataset names (strings, not full dataset configs)
+    """
+    benchmark_cfg = OmegaConf.load(
+        PROJECT_ROOT / "conf" / "benchmark" / f"{benchmark_name}.yaml"
+    )
+    # Extract dataset names from the ${dataset:"XXX"} entries
+    # The resolver will have already been applied, so we get the full configs
+    # We just need the 'name' field from each
+    dataset_names = [ds.name for ds in benchmark_cfg.datasets]
+    return dataset_names
+
+
 OmegaConf.register_new_resolver("dataset", dataset_resolver)
+OmegaConf.register_new_resolver("benchmark_datasets", benchmark_datasets_resolver)

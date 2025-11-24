@@ -161,8 +161,13 @@ def run(cfg: DictConfig) -> Dict:
     output_path = Path(cfg.mergeability.output_path)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    datasets_suffix = "_".join(dataset_names)
-    output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}.json"
+    # Use benchmark_name if provided, otherwise fall back to listing datasets
+    benchmark_name = cfg.mergeability.get("benchmark_name", None)
+    if benchmark_name:
+        output_file = output_path / f"pairwise_metrics_{benchmark_name}.json"
+    else:
+        datasets_suffix = "_".join(dataset_names)
+        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}.json"
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
