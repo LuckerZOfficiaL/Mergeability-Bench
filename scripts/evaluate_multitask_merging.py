@@ -75,21 +75,24 @@ def load_config(
     return cfg
 
 
-def run(cfg: DictConfig) -> str:
-    """Generic train loop.
+def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_name: Optional[str] = None) -> Dict:
+    """Run merging evaluation for a single set of datasets.
 
     Args:
         cfg: run configuration, defined by Hydra in /conf
+        datasets_to_use: Optional list of dataset configs to use (for pairwise mode)
+        pair_name: Optional name for the pair (for logging/saving)
 
     Returns:
-        the run directory inside the storage_dir used by the current experiment
+        Dictionary containing evaluation results
     """
-
     seed_index_everything(cfg)
 
     logger, template_core = boilerplate(cfg)
 
-    num_tasks = len(cfg.benchmark.datasets)
+    # Use provided datasets or fall back to config
+    datasets = datasets_to_use if datasets_to_use is not None else list(cfg.benchmark.datasets)
+    num_tasks = len(datasets)
 
     # Temporarily disable struct mode to allow dynamic update
     omegaconf.OmegaConf.set_struct(cfg, False)
@@ -110,11 +113,13 @@ def run(cfg: DictConfig) -> str:
         dataset: load_model_from_hf(
             model_name=cfg.nn.encoder.model_name, dataset_name=dataset.name
         ).state_dict()
-        for dataset in cfg.benchmark.datasets
+        for dataset in datasets
     }
 
-    pylogger.info(f"Number of tasks: {cfg.num_tasks}")
-    pylogger.info(f"Finetuned models: {list(finetuned_models.keys())}")
+    if pair_name:
+        pylogger.info(f"=== Evaluating pair: {pair_name} ===")
+    pylogger.info(f"Number of tasks: {num_tasks}")
+    pylogger.info(f"Finetuned models: {[d.name for d in datasets]}")
     pylogger.info(f"Using merger: {cfg.merger._target_}")
 
     merger = instantiate(cfg.merger)
@@ -125,7 +130,7 @@ def run(cfg: DictConfig) -> str:
 
     results = {}
     print_memory("before eval")
-    for dataset_cfg in cfg.benchmark.datasets:
+    for dataset_cfg in datasets:
 
         dataset = instantiate(
             dataset_cfg, preprocess_fn=zeroshot_encoder.val_preprocess
@@ -189,24 +194,98 @@ def run(cfg: DictConfig) -> str:
 
     results_path = Path(cfg.misc.results_path)
     results_path.mkdir(parents=True, exist_ok=True)
-    with open(results_path / f"{len(cfg.benchmark.datasets)}.json", "w+") as f:
+
+    # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
+    merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
+
+    # Use pair_name for filename if provided, otherwise use num_tasks
+    if pair_name:
+        filename = f"pair_{pair_name}_{merger_name}.json"
+    else:
+        filename = f"{num_tasks}_{merger_name}.json"
+
+    with open(results_path / filename, "w+") as f:
         json.dump(results, f, indent=4)
 
     radarchart = plot_interactive_radar_chart(results, title="Radar Chart")
     logger.experiment.log({"radar": wandb.Plotly(radarchart)})
 
-    pylogger.info(f"Results saved to {cfg.misc.results_path}")
+    pylogger.info(f"Results saved to {results_path / filename}")
 
     logger.experiment.log_artifact(
         wandb.Artifact(
-            f"results_{cfg.nn.encoder.model_name}_{num_tasks}",
+            f"results_{cfg.nn.encoder.model_name}_{pair_name or num_tasks}",
             type="results",
-            metadata={"results": results_path},
+            metadata={"results": str(results_path)},
         )
     )
 
     if logger is not None:
         logger.experiment.finish()
+
+    return results
+
+
+def run(cfg: DictConfig):
+    """Main entry point - handles both single run and all_pairwise mode.
+
+    Args:
+        cfg: run configuration, defined by Hydra in /conf
+    """
+    all_pairwise = cfg.get("all_pairwise", False)
+
+    if not all_pairwise:
+        # Standard single run with all datasets in benchmark
+        return run_single(cfg)
+
+    # All pairwise mode: run merging for each pair of datasets
+    datasets = list(cfg.benchmark.datasets)
+    n_datasets = len(datasets)
+    n_pairs = n_datasets * (n_datasets - 1) // 2
+
+    pylogger.info(f"Running ALL PAIRWISE merging evaluation")
+    pylogger.info(f"Benchmark has {n_datasets} datasets: {[d.name for d in datasets]}")
+    pylogger.info(f"Total pairs to evaluate: {n_pairs}")
+
+    all_results = {}
+    pair_idx = 0
+
+    for i in range(n_datasets):
+        for j in range(i + 1, n_datasets):
+            pair_idx += 1
+            dataset_i = datasets[i]
+            dataset_j = datasets[j]
+            pair_name = f"{dataset_i.name}__{dataset_j.name}"
+
+            pylogger.info(f"\n{'='*60}")
+            pylogger.info(f"[{pair_idx}/{n_pairs}] Evaluating pair: {pair_name}")
+            pylogger.info(f"{'='*60}\n")
+
+            try:
+                pair_results = run_single(
+                    cfg,
+                    datasets_to_use=[dataset_i, dataset_j],
+                    pair_name=pair_name
+                )
+                all_results[pair_name] = pair_results
+            except Exception as e:
+                pylogger.error(f"Failed to evaluate pair {pair_name}: {e}")
+                all_results[pair_name] = {"error": str(e)}
+
+    # Save summary of all pairwise results
+    results_path = Path(cfg.misc.results_path)
+    results_path.mkdir(parents=True, exist_ok=True)
+
+    summary_file = results_path / "all_pairwise_summary.json"
+    with open(summary_file, "w+") as f:
+        json.dump(all_results, f, indent=4)
+
+    pylogger.info(f"\n{'='*60}")
+    pylogger.info(f"ALL PAIRWISE EVALUATION COMPLETE")
+    pylogger.info(f"Summary saved to: {summary_file}")
+    pylogger.info(f"{'='*60}")
+
+    return all_results
 
 
 @hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="multitask.yaml")
