@@ -241,3 +241,7 @@ cache/
 .cache/
 outputs/
 modelssvd_dict_*
+
+
+# Results
+results/
