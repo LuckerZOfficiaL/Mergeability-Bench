@@ -192,17 +192,18 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
 
     pylogger.info(results)
 
-    results_path = Path(cfg.misc.results_path)
-    results_path.mkdir(parents=True, exist_ok=True)
-
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
     merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
 
+    # Create merger-specific folder
+    results_path = Path(cfg.misc.results_path) / merger_name
+    results_path.mkdir(parents=True, exist_ok=True)
+
     # Use pair_name for filename if provided, otherwise use num_tasks
     if pair_name:
-        filename = f"pair_{pair_name}_{merger_name}.json"
+        filename = f"pair_{pair_name}.json"
     else:
-        filename = f"{num_tasks}_{merger_name}.json"
+        filename = f"{num_tasks}.json"
 
     with open(results_path / filename, "w+") as f:
         json.dump(results, f, indent=4)
@@ -273,14 +274,16 @@ def run(cfg: DictConfig):
                 all_results[pair_name] = {"error": str(e)}
 
     # Save summary of all pairwise results
-    results_path = Path(cfg.misc.results_path)
-    results_path.mkdir(parents=True, exist_ok=True)
-
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
     merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
+
+    # Create merger-specific folder
+    results_path = Path(cfg.misc.results_path) / merger_name
+    results_path.mkdir(parents=True, exist_ok=True)
+
     # Get benchmark name from config (e.g., "N8", "N20")
     benchmark_name = cfg.benchmark.get("name", f"N{n_datasets}")
-    summary_file = results_path / f"all_pairwise_summary_{benchmark_name}_{merger_name}.json"
+    summary_file = results_path / f"all_pairwise_summary_{benchmark_name}.json"
     with open(summary_file, "w+") as f:
         json.dump(all_results, f, indent=4)
 
