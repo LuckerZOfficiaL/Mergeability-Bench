@@ -1,0 +1,22 @@
+{
+    "DTD": [
+        {
+            "acc/test/DTD": 0.6085106134414673,
+            "loss/test/DTD": 1.434125304222107,
+            "normalized_acc/test/DTD": 0.7782312631607056
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.8677999973297119,
+            "loss/test/FashionMNIST": 0.40639442205429077,
+            "normalized_acc/test/FashionMNIST": 0.9216227531433105
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7381553053855896,
+            "normalized_acc/test/avg": 0.8499270081520081
+        }
+    ]
+}

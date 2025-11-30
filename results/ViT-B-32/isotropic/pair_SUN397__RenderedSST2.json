@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.6974307298660278,
+            "loss/test/SUN397": 1.050559639930725,
+            "normalized_acc/test/SUN397": 0.9314404726028442
+        }
+    ],
+    "RenderedSST2": [
+        {
+            "acc/test/RenderedSST2": 0.6798462271690369,
+            "loss/test/RenderedSST2": 0.6001214385032654,
+            "normalized_acc/test/RenderedSST2": 1.0016181468963623
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.6886384785175323,
+            "normalized_acc/test/avg": 0.9665293097496033
+        }
+    ]
+}

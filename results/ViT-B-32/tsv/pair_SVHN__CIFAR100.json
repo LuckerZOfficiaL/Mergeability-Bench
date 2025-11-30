@@ -1,0 +1,22 @@
+{
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.9633143544197083,
+            "loss/test/SVHN": 0.13990478217601776,
+            "normalized_acc/test/SVHN": 0.9965426325798035
+        }
+    ],
+    "CIFAR100": [
+        {
+            "acc/test/CIFAR100": 0.8070999979972839,
+            "loss/test/CIFAR100": 0.7840338945388794,
+            "normalized_acc/test/CIFAR100": 0.9281278848648071
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8852071762084961,
+            "normalized_acc/test/avg": 0.9623352587223053
+        }
+    ]
+}

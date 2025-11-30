@@ -1,0 +1,22 @@
+{
+    "MNIST": [
+        {
+            "acc/test/MNIST": 0.9107000231742859,
+            "loss/test/MNIST": 0.6078974604606628,
+            "normalized_acc/test/MNIST": 0.9157366156578064
+        }
+    ],
+    "FER2013": [
+        {
+            "acc/test/FER2013": 0.5941766500473022,
+            "loss/test/FER2013": 1.1646300554275513,
+            "normalized_acc/test/FER2013": 0.8334961533546448
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7524383366107941,
+            "normalized_acc/test/avg": 0.8746163845062256
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "DTD": [
+        {
+            "acc/test/DTD": 0.6632978916168213,
+            "loss/test/DTD": 1.3335126638412476,
+            "normalized_acc/test/DTD": 0.8482993245124817
+        }
+    ],
+    "CIFAR100": [
+        {
+            "acc/test/CIFAR100": 0.8421000242233276,
+            "loss/test/CIFAR100": 0.639228343963623,
+            "normalized_acc/test/CIFAR100": 0.9683762788772583
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7526989579200745,
+            "normalized_acc/test/avg": 0.90833780169487
+        }
+    ]
+}

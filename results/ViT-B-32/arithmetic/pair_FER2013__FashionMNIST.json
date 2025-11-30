@@ -1,0 +1,22 @@
+{
+    "FER2013": [
+        {
+            "acc/test/FER2013": 0.6471161842346191,
+            "loss/test/FER2013": 0.9929319620132446,
+            "normalized_acc/test/FER2013": 0.9077584147453308
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.8644000291824341,
+            "loss/test/FashionMNIST": 0.40255028009414673,
+            "normalized_acc/test/FashionMNIST": 0.9180119037628174
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7557581067085266,
+            "normalized_acc/test/avg": 0.9128851592540741
+        }
+    ]
+}

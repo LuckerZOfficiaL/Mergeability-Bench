@@ -1,0 +1,22 @@
+{
+    "GTSRB": [
+        {
+            "acc/test/GTSRB": 0.7156769633293152,
+            "loss/test/GTSRB": 1.0948585271835327,
+            "normalized_acc/test/GTSRB": 0.7234093546867371
+        }
+    ],
+    "MNIST": [
+        {
+            "acc/test/MNIST": 0.8676999807357788,
+            "loss/test/MNIST": 0.8203706741333008,
+            "normalized_acc/test/MNIST": 0.8724987506866455
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.791688472032547,
+            "normalized_acc/test/avg": 0.7979540526866913
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.774920642375946,
+            "loss/test/RESISC45": 0.7363278269767761,
+            "normalized_acc/test/RESISC45": 0.8131245970726013
+        }
+    ],
+    "Flowers102": [
+        {
+            "acc/test/Flowers102": 0.7866320013999939,
+            "loss/test/Flowers102": 0.8843095302581787,
+            "normalized_acc/test/Flowers102": 0.8753167390823364
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.78077632188797,
+            "normalized_acc/test/avg": 0.8442206680774689
+        }
+    ]
+}

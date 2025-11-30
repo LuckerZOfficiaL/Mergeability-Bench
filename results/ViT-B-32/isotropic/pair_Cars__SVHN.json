@@ -1,0 +1,22 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars": 0.7144633531570435,
+            "loss/test/Cars": 0.8994933366775513,
+            "normalized_acc/test/Cars": 0.895138680934906
+        }
+    ],
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.7103564739227295,
+            "loss/test/SVHN": 1.0294184684753418,
+            "normalized_acc/test/SVHN": 0.7348592877388
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7124099135398865,
+            "normalized_acc/test/avg": 0.814998984336853
+        }
+    ]
+}

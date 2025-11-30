@@ -1,0 +1,22 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars": 0.6036562323570251,
+            "loss/test/Cars": 1.397729516029358,
+            "normalized_acc/test/Cars": 0.7563103437423706
+        }
+    ],
+    "CIFAR10": [
+        {
+            "acc/test/CIFAR10": 0.9681000113487244,
+            "loss/test/CIFAR10": 0.11939045041799545,
+            "normalized_acc/test/CIFAR10": 0.992617666721344
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7858781218528748,
+            "normalized_acc/test/avg": 0.8744640052318573
+        }
+    ]
+}

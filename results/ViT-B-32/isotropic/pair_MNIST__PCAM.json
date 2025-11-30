@@ -1,0 +1,22 @@
+{
+    "MNIST": [
+        {
+            "acc/test/MNIST": 0.9243000149726868,
+            "loss/test/MNIST": 0.6530646085739136,
+            "normalized_acc/test/MNIST": 0.929411768913269
+        }
+    ],
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.76495361328125,
+            "loss/test/PCAM": 0.5112587213516235,
+            "normalized_acc/test/PCAM": 0.8867897987365723
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8446268141269684,
+            "normalized_acc/test/avg": 0.9081007838249207
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.7495006322860718,
+            "loss/test/SVHN": 0.9075820446014404,
+            "normalized_acc/test/SVHN": 0.7753536701202393
+        }
+    ],
+    "Food101": [
+        {
+            "acc/test/Food101": 0.8543366193771362,
+            "loss/test/Food101": 0.5021068453788757,
+            "normalized_acc/test/Food101": 0.9930030703544617
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.801918625831604,
+            "normalized_acc/test/avg": 0.8841783702373505
+        }
+    ]
+}

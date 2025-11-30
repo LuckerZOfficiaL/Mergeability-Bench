@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.699999988079071,
+            "loss/test/SUN397": 1.0382599830627441,
+            "normalized_acc/test/SUN397": 0.9348717927932739
+        }
+    ],
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.761810302734375,
+            "loss/test/PCAM": 0.5113378167152405,
+            "normalized_acc/test/PCAM": 0.883145809173584
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.730905145406723,
+            "normalized_acc/test/avg": 0.909008800983429
+        }
+    ]
+}

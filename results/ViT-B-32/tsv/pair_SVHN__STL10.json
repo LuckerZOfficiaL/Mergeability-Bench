@@ -1,0 +1,22 @@
+{
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.9675015211105347,
+            "loss/test/SVHN": 0.12773141264915466,
+            "normalized_acc/test/SVHN": 1.0008742809295654
+        }
+    ],
+    "STL10": [
+        {
+            "acc/test/STL10": 0.9638749957084656,
+            "loss/test/STL10": 0.12398834526538849,
+            "normalized_acc/test/STL10": 0.9880830645561218
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.9656882584095001,
+            "normalized_acc/test/avg": 0.9944786727428436
+        }
+    ]
+}

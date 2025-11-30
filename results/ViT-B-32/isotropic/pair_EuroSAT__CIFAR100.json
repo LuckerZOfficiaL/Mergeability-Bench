@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.9133333563804626,
+            "loss/test/EuroSAT": 0.2846100330352783,
+            "normalized_acc/test/EuroSAT": 0.9201492667198181
+        }
+    ],
+    "CIFAR100": [
+        {
+            "acc/test/CIFAR100": 0.7858999967575073,
+            "loss/test/CIFAR100": 0.7658616304397583,
+            "normalized_acc/test/CIFAR100": 0.9037488698959351
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.849616676568985,
+            "normalized_acc/test/avg": 0.9119490683078766
+        }
+    ]
+}

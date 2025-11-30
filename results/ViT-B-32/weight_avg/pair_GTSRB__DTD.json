@@ -1,0 +1,22 @@
+{
+    "GTSRB": [
+        {
+            "acc/test/GTSRB": 0.9710213541984558,
+            "loss/test/GTSRB": 0.1296105682849884,
+            "normalized_acc/test/GTSRB": 0.9815126061439514
+        }
+    ],
+    "DTD": [
+        {
+            "acc/test/DTD": 0.6760638356208801,
+            "loss/test/DTD": 1.250262975692749,
+            "normalized_acc/test/DTD": 0.864625871181488
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.823542594909668,
+            "normalized_acc/test/avg": 0.9230692386627197
+        }
+    ]
+}

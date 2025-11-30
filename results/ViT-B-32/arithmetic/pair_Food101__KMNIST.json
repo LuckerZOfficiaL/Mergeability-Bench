@@ -1,0 +1,22 @@
+{
+    "Food101": [
+        {
+            "acc/test/Food101": 0.8642376065254211,
+            "loss/test/Food101": 0.4748610854148865,
+            "normalized_acc/test/Food101": 1.0045111179351807
+        }
+    ],
+    "KMNIST": [
+        {
+            "acc/test/KMNIST": 0.5109000205993652,
+            "loss/test/KMNIST": 1.7032511234283447,
+            "normalized_acc/test/KMNIST": 0.5206359028816223
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.6875688135623932,
+            "normalized_acc/test/avg": 0.7625735104084015
+        }
+    ]
+}

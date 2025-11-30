@@ -1,0 +1,22 @@
+{
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.847320556640625,
+            "loss/test/PCAM": 0.34203094244003296,
+            "normalized_acc/test/PCAM": 0.9822755455970764
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.892300009727478,
+            "loss/test/FashionMNIST": 0.294413298368454,
+            "normalized_acc/test/FashionMNIST": 0.9476422667503357
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8698102831840515,
+            "normalized_acc/test/avg": 0.964958906173706
+        }
+    ]
+}

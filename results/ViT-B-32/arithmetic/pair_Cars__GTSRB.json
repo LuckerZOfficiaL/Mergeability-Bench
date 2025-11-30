@@ -1,0 +1,22 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars": 0.711603045463562,
+            "loss/test/Cars": 0.8727115988731384,
+            "normalized_acc/test/Cars": 0.8915550112724304
+        }
+    ],
+    "GTSRB": [
+        {
+            "acc/test/GTSRB": 0.8566904067993164,
+            "loss/test/GTSRB": 0.6046392321586609,
+            "normalized_acc/test/GTSRB": 0.865946352481842
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7841467261314392,
+            "normalized_acc/test/avg": 0.8787506818771362
+        }
+    ]
+}

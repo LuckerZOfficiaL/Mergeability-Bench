@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.877407431602478,
+            "loss/test/EuroSAT": 0.37874743342399597,
+            "normalized_acc/test/EuroSAT": 0.8839552402496338
+        }
+    ],
+    "MNIST": [
+        {
+            "acc/test/MNIST": 0.8639000058174133,
+            "loss/test/MNIST": 0.880548357963562,
+            "normalized_acc/test/MNIST": 0.8686777353286743
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8706537187099457,
+            "normalized_acc/test/avg": 0.876316487789154
+        }
+    ]
+}

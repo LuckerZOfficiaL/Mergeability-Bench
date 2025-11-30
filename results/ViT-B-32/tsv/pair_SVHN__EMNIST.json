@@ -1,0 +1,22 @@
+{
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.9560924768447876,
+            "loss/test/SVHN": 0.1719917207956314,
+            "normalized_acc/test/SVHN": 0.9890716671943665
+        }
+    ],
+    "EMNIST": [
+        {
+            "acc/test/EMNIST": 0.9925000071525574,
+            "loss/test/EMNIST": 0.03143560141324997,
+            "normalized_acc/test/EMNIST": 0.9979889392852783
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.9742962419986725,
+            "normalized_acc/test/avg": 0.9935303032398224
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars": 0.6975500583648682,
+            "loss/test/Cars": 0.9262006282806396,
+            "normalized_acc/test/Cars": 0.8739482760429382
+        }
+    ],
+    "DTD": [
+        {
+            "acc/test/DTD": 0.646276593208313,
+            "loss/test/DTD": 1.271276831626892,
+            "normalized_acc/test/DTD": 0.8265306353569031
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.6719133257865906,
+            "normalized_acc/test/avg": 0.8502394556999207
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.859682559967041,
+            "loss/test/RESISC45": 0.4745582342147827,
+            "normalized_acc/test/RESISC45": 0.9020653367042542
+        }
+    ],
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.846160888671875,
+            "loss/test/PCAM": 0.44261857867240906,
+            "normalized_acc/test/PCAM": 0.9809311628341675
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.852921724319458,
+            "normalized_acc/test/avg": 0.9414982497692108
+        }
+    ]
+}

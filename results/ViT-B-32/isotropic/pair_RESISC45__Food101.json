@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.8801587224006653,
+            "loss/test/RESISC45": 0.4006258249282837,
+            "normalized_acc/test/RESISC45": 0.9235509634017944
+        }
+    ],
+    "Food101": [
+        {
+            "acc/test/Food101": 0.8637228012084961,
+            "loss/test/Food101": 0.4645348787307739,
+            "normalized_acc/test/Food101": 1.0039126873016357
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8719407618045807,
+            "normalized_acc/test/avg": 0.9637318253517151
+        }
+    ]
+}

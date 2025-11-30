@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.8737037181854248,
+            "loss/test/EuroSAT": 0.3946274220943451,
+            "normalized_acc/test/EuroSAT": 0.8802239298820496
+        }
+    ],
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.722747802734375,
+            "loss/test/PCAM": 0.5620612502098083,
+            "normalized_acc/test/PCAM": 0.8378617167472839
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7982257604598999,
+            "normalized_acc/test/avg": 0.8590428233146667
+        }
+    ]
+}

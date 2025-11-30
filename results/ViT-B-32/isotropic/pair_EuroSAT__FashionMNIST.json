@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.9048148393630981,
+            "loss/test/EuroSAT": 0.29566335678100586,
+            "normalized_acc/test/EuroSAT": 0.911567211151123
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.8019000291824341,
+            "loss/test/FashionMNIST": 0.603400707244873,
+            "normalized_acc/test/FashionMNIST": 0.8516355156898499
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8533574342727661,
+            "normalized_acc/test/avg": 0.8816013634204865
+        }
+    ]
+}

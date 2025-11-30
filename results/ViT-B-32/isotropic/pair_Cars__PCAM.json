@@ -1,0 +1,22 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars": 0.6979231238365173,
+            "loss/test/Cars": 0.9414323568344116,
+            "normalized_acc/test/Cars": 0.8744156956672668
+        }
+    ],
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.77996826171875,
+            "loss/test/PCAM": 0.4913025200366974,
+            "normalized_acc/test/PCAM": 0.9041958451271057
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7389456927776337,
+            "normalized_acc/test/avg": 0.8893057703971863
+        }
+    ]
+}

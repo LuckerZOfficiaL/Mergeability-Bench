@@ -1,0 +1,22 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars": 0.7358537316322327,
+            "loss/test/Cars": 0.8167389631271362,
+            "normalized_acc/test/Cars": 0.9219383001327515
+        }
+    ],
+    "Food101": [
+        {
+            "acc/test/Food101": 0.87148517370224,
+            "loss/test/Food101": 0.44047367572784424,
+            "normalized_acc/test/Food101": 1.0129350423812866
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8036694526672363,
+            "normalized_acc/test/avg": 0.967436671257019
+        }
+    ]
+}

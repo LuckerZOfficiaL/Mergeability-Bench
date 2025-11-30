@@ -1,0 +1,22 @@
+{
+    "DTD": [
+        {
+            "acc/test/DTD": 0.6117021441459656,
+            "loss/test/DTD": 1.3840326070785522,
+            "normalized_acc/test/DTD": 0.7823129296302795
+        }
+    ],
+    "STL10": [
+        {
+            "acc/test/STL10": 0.9828749895095825,
+            "loss/test/STL10": 0.05514492467045784,
+            "normalized_acc/test/STL10": 1.0075602531433105
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.797288566827774,
+            "normalized_acc/test/avg": 0.894936591386795
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.6942065358161926,
+            "loss/test/SUN397": 1.0509111881256104,
+            "normalized_acc/test/SUN397": 0.9271344542503357
+        }
+    ],
+    "STL10": [
+        {
+            "acc/test/STL10": 0.9831249713897705,
+            "loss/test/STL10": 0.05948884040117264,
+            "normalized_acc/test/STL10": 1.0078164339065552
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8386657536029816,
+            "normalized_acc/test/avg": 0.9674754440784454
+        }
+    ]
+}

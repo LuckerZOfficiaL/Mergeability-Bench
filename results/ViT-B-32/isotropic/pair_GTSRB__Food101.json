@@ -1,0 +1,22 @@
+{
+    "GTSRB": [
+        {
+            "acc/test/GTSRB": 0.8703088164329529,
+            "loss/test/GTSRB": 0.6223041415214539,
+            "normalized_acc/test/GTSRB": 0.879711925983429
+        }
+    ],
+    "Food101": [
+        {
+            "acc/test/Food101": 0.8656633496284485,
+            "loss/test/Food101": 0.46695569157600403,
+            "normalized_acc/test/Food101": 1.006168246269226
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8679860830307007,
+            "normalized_acc/test/avg": 0.9429400861263275
+        }
+    ]
+}

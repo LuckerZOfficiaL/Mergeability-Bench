@@ -1,0 +1,22 @@
+{
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.847259521484375,
+            "loss/test/PCAM": 0.3360157907009125,
+            "normalized_acc/test/PCAM": 0.982204794883728
+        }
+    ],
+    "KMNIST": [
+        {
+            "acc/test/KMNIST": 0.7613999843597412,
+            "loss/test/KMNIST": 1.160675287246704,
+            "normalized_acc/test/KMNIST": 0.7759094834327698
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8043297529220581,
+            "normalized_acc/test/avg": 0.8790571391582489
+        }
+    ]
+}

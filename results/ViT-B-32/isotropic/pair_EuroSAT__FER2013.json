@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.9096296429634094,
+            "loss/test/EuroSAT": 0.29126131534576416,
+            "normalized_acc/test/EuroSAT": 0.9164179563522339
+        }
+    ],
+    "FER2013": [
+        {
+            "acc/test/FER2013": 0.584285318851471,
+            "loss/test/FER2013": 1.1827327013015747,
+            "normalized_acc/test/FER2013": 0.8196208477020264
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7469574809074402,
+            "normalized_acc/test/avg": 0.8680194020271301
+        }
+    ]
+}

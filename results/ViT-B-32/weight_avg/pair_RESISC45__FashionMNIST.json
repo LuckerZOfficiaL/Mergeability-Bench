@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.8582539558410645,
+            "loss/test/RESISC45": 0.4603224992752075,
+            "normalized_acc/test/RESISC45": 0.9005662798881531
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.911899983882904,
+            "loss/test/FashionMNIST": 0.2684018015861511,
+            "normalized_acc/test/FashionMNIST": 0.9684578776359558
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8850769698619843,
+            "normalized_acc/test/avg": 0.9345120787620544
+        }
+    ]
+}

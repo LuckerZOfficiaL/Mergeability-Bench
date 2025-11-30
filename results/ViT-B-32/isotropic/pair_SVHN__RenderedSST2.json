@@ -1,0 +1,22 @@
+{
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.6537338495254517,
+            "loss/test/SVHN": 1.1980055570602417,
+            "normalized_acc/test/SVHN": 0.6762835383415222
+        }
+    ],
+    "RenderedSST2": [
+        {
+            "acc/test/RenderedSST2": 0.6699615716934204,
+            "loss/test/RenderedSST2": 0.6041702628135681,
+            "normalized_acc/test/RenderedSST2": 0.9870550036430359
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.661847710609436,
+            "normalized_acc/test/avg": 0.831669270992279
+        }
+    ]
+}

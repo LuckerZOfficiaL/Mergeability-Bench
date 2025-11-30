@@ -1,0 +1,22 @@
+{
+    "PCAM": [
+        {
+            "acc/test/PCAM": 0.81640625,
+            "loss/test/PCAM": 0.39891403913497925,
+            "normalized_acc/test/PCAM": 0.946437418460846
+        }
+    ],
+    "CIFAR100": [
+        {
+            "acc/test/CIFAR100": 0.7545999884605408,
+            "loss/test/CIFAR100": 0.8965449929237366,
+            "normalized_acc/test/CIFAR100": 0.8677552938461304
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7855031192302704,
+            "normalized_acc/test/avg": 0.9070963561534882
+        }
+    ]
+}

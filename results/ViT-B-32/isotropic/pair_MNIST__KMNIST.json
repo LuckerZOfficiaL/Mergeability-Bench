@@ -1,0 +1,22 @@
+{
+    "MNIST": [
+        {
+            "acc/test/MNIST": 0.8948000073432922,
+            "loss/test/MNIST": 0.7329102754592896,
+            "normalized_acc/test/MNIST": 0.8997486233711243
+        }
+    ],
+    "KMNIST": [
+        {
+            "acc/test/KMNIST": 0.17149999737739563,
+            "loss/test/KMNIST": 2.2346975803375244,
+            "normalized_acc/test/KMNIST": 0.17476816475391388
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.5331500023603439,
+            "normalized_acc/test/avg": 0.5372583940625191
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.7879365086555481,
+            "loss/test/RESISC45": 0.6884298920631409,
+            "normalized_acc/test/RESISC45": 0.8267821669578552
+        }
+    ],
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.8618518710136414,
+            "loss/test/EuroSAT": 0.37968310713768005,
+            "normalized_acc/test/EuroSAT": 0.8682836294174194
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8248941898345947,
+            "normalized_acc/test/avg": 0.8475328981876373
+        }
+    ]
+}

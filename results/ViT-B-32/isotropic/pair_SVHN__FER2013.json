@@ -1,0 +1,22 @@
+{
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.6965657472610474,
+            "loss/test/SVHN": 1.0795456171035767,
+            "normalized_acc/test/SVHN": 0.7205928564071655
+        }
+    ],
+    "FER2013": [
+        {
+            "acc/test/FER2013": 0.6175814867019653,
+            "loss/test/FER2013": 1.1245824098587036,
+            "normalized_acc/test/FER2013": 0.8663278818130493
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.6570736169815063,
+            "normalized_acc/test/avg": 0.7934603691101074
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.7520906925201416,
+            "loss/test/SUN397": 0.957655668258667,
+            "normalized_acc/test/SUN397": 1.0044405460357666
+        }
+    ],
+    "OxfordIIITPet": [
+        {
+            "acc/test/OxfordIIITPet": 0.929681122303009,
+            "loss/test/OxfordIIITPet": 0.29149559140205383,
+            "normalized_acc/test/OxfordIIITPet": 1.00294029712677
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8408859074115753,
+            "normalized_acc/test/avg": 1.0036904215812683
+        }
+    ]
+}

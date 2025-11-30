@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.6988413333892822,
+            "loss/test/SUN397": 1.0356050729751587,
+            "normalized_acc/test/SUN397": 0.9333243370056152
+        }
+    ],
+    "EMNIST": [
+        {
+            "acc/test/EMNIST": 0.9014999866485596,
+            "loss/test/EMNIST": 0.673916757106781,
+            "normalized_acc/test/EMNIST": 0.9064856767654419
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8001706600189209,
+            "normalized_acc/test/avg": 0.9199050068855286
+        }
+    ]
+}

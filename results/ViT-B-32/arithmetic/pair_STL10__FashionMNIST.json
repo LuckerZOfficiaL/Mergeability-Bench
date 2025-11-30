@@ -1,0 +1,22 @@
+{
+    "STL10": [
+        {
+            "acc/test/STL10": 0.9754999876022339,
+            "loss/test/STL10": 0.07792913168668747,
+            "normalized_acc/test/STL10": 1.0
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.8596000075340271,
+            "loss/test/FashionMNIST": 0.40411409735679626,
+            "normalized_acc/test/FashionMNIST": 0.9129141569137573
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.9175499975681305,
+            "normalized_acc/test/avg": 0.9564570784568787
+        }
+    ]
+}

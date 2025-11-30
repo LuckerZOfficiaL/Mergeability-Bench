@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.8315873146057129,
+            "loss/test/RESISC45": 0.5582484006881714,
+            "normalized_acc/test/RESISC45": 0.8725849390029907
+        }
+    ],
+    "MNIST": [
+        {
+            "acc/test/MNIST": 0.89410001039505,
+            "loss/test/MNIST": 0.7241851687431335,
+            "normalized_acc/test/MNIST": 0.8990447521209717
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8628436625003815,
+            "normalized_acc/test/avg": 0.8858148455619812
+        }
+    ]
+}

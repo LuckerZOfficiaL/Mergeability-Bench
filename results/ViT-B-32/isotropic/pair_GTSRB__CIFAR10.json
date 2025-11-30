@@ -1,0 +1,22 @@
+{
+    "GTSRB": [
+        {
+            "acc/test/GTSRB": 0.7497228980064392,
+            "loss/test/GTSRB": 1.0153173208236694,
+            "normalized_acc/test/GTSRB": 0.7578231692314148
+        }
+    ],
+    "CIFAR10": [
+        {
+            "acc/test/CIFAR10": 0.9549999833106995,
+            "loss/test/CIFAR10": 0.14127984642982483,
+            "normalized_acc/test/CIFAR10": 0.9791858792304993
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8523614406585693,
+            "normalized_acc/test/avg": 0.868504524230957
+        }
+    ]
+}

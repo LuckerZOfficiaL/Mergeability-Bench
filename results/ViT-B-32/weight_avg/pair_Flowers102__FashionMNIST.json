@@ -1,0 +1,22 @@
+{
+    "Flowers102": [
+        {
+            "acc/test/Flowers102": 0.7485769987106323,
+            "loss/test/Flowers102": 1.0318095684051514,
+            "normalized_acc/test/Flowers102": 0.8329713940620422
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.9204999804496765,
+            "loss/test/FashionMNIST": 0.23772741854190826,
+            "normalized_acc/test/FashionMNIST": 0.9775912761688232
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8345384895801544,
+            "normalized_acc/test/avg": 0.9052813351154327
+        }
+    ]
+}

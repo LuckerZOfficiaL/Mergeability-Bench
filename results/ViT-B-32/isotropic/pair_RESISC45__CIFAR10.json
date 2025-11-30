@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.8469841480255127,
+            "loss/test/RESISC45": 0.5280314683914185,
+            "normalized_acc/test/RESISC45": 0.8887408971786499
+        }
+    ],
+    "CIFAR10": [
+        {
+            "acc/test/CIFAR10": 0.9552000164985657,
+            "loss/test/CIFAR10": 0.13950447738170624,
+            "normalized_acc/test/CIFAR10": 0.9793909788131714
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.9010920822620392,
+            "normalized_acc/test/avg": 0.9340659379959106
+        }
+    ]
+}

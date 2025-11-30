@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.9442856907844543,
+            "loss/test/RESISC45": 0.21178393065929413,
+            "normalized_acc/test/RESISC45": 0.990839421749115
+        }
+    ],
+    "FER2013": [
+        {
+            "acc/test/FER2013": 0.7153803110122681,
+            "loss/test/FER2013": 1.2585207223892212,
+            "normalized_acc/test/FER2013": 1.0035176277160645
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8298330008983612,
+            "normalized_acc/test/avg": 0.9971785247325897
+        }
+    ]
+}

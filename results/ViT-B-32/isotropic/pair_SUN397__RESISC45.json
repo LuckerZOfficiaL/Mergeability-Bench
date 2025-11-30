@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.7012090682983398,
+            "loss/test/SUN397": 1.027050256729126,
+            "normalized_acc/test/SUN397": 0.936486542224884
+        }
+    ],
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.8442857265472412,
+            "loss/test/RESISC45": 0.5169351696968079,
+            "normalized_acc/test/RESISC45": 0.8859094381332397
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7727473974227905,
+            "normalized_acc/test/avg": 0.9111979901790619
+        }
+    ]
+}

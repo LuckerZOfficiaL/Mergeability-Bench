@@ -1,0 +1,22 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397": 0.7252896428108215,
+            "loss/test/SUN397": 0.9528177976608276,
+            "normalized_acc/test/SUN397": 0.9686468839645386
+        }
+    ],
+    "Food101": [
+        {
+            "acc/test/Food101": 0.8721980452537537,
+            "loss/test/Food101": 0.44010573625564575,
+            "normalized_acc/test/Food101": 1.0137635469436646
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7987438440322876,
+            "normalized_acc/test/avg": 0.9912052154541016
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.820793628692627,
+            "loss/test/RESISC45": 0.5957220792770386,
+            "normalized_acc/test/RESISC45": 0.8612591624259949
+        }
+    ],
+    "GTSRB": [
+        {
+            "acc/test/GTSRB": 0.7269200086593628,
+            "loss/test/GTSRB": 1.102563500404358,
+            "normalized_acc/test/GTSRB": 0.7347738742828369
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7738568186759949,
+            "normalized_acc/test/avg": 0.7980165183544159
+        }
+    ]
+}

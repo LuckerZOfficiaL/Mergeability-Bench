@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.9870370626449585,
+            "loss/test/EuroSAT": 0.04646564647555351,
+            "normalized_acc/test/EuroSAT": 0.9944030046463013
+        }
+    ],
+    "DTD": [
+        {
+            "acc/test/DTD": 0.681382954120636,
+            "loss/test/DTD": 1.2223763465881348,
+            "normalized_acc/test/DTD": 0.8714285492897034
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8342100083827972,
+            "normalized_acc/test/avg": 0.9329157769680023
+        }
+    ]
+}

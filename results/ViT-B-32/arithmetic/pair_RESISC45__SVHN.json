@@ -1,0 +1,22 @@
+{
+    "RESISC45": [
+        {
+            "acc/test/RESISC45": 0.8349206447601318,
+            "loss/test/RESISC45": 0.5450133085250854,
+            "normalized_acc/test/RESISC45": 0.8760826587677002
+        }
+    ],
+    "SVHN": [
+        {
+            "acc/test/SVHN": 0.8617854714393616,
+            "loss/test/SVHN": 0.53517746925354,
+            "normalized_acc/test/SVHN": 0.8915116190910339
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8483530580997467,
+            "normalized_acc/test/avg": 0.8837971389293671
+        }
+    ]
+}

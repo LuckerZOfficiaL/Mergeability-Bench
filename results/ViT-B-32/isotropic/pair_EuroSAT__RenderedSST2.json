@@ -1,0 +1,22 @@
+{
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT": 0.8496296405792236,
+            "loss/test/EuroSAT": 0.43400558829307556,
+            "normalized_acc/test/EuroSAT": 0.8559702038764954
+        }
+    ],
+    "RenderedSST2": [
+        {
+            "acc/test/RenderedSST2": 0.657331109046936,
+            "loss/test/RenderedSST2": 0.6171261072158813,
+            "normalized_acc/test/RenderedSST2": 0.9684465527534485
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7534803748130798,
+            "normalized_acc/test/avg": 0.9122083783149719
+        }
+    ]
+}

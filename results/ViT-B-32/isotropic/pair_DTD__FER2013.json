@@ -1,0 +1,22 @@
+{
+    "DTD": [
+        {
+            "acc/test/DTD": 0.6441489458084106,
+            "loss/test/DTD": 1.2936534881591797,
+            "normalized_acc/test/DTD": 0.8238095641136169
+        }
+    ],
+    "FER2013": [
+        {
+            "acc/test/FER2013": 0.5788520574569702,
+            "loss/test/FER2013": 1.1936426162719727,
+            "normalized_acc/test/FER2013": 0.8119992017745972
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.6115005016326904,
+            "normalized_acc/test/avg": 0.8179043829441071
+        }
+    ]
+}

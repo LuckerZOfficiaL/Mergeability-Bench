@@ -1,0 +1,22 @@
+{
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST": 0.8633000254631042,
+            "loss/test/FashionMNIST": 0.384697824716568,
+            "normalized_acc/test/FashionMNIST": 0.9168436527252197
+        }
+    ],
+    "KMNIST": [
+        {
+            "acc/test/KMNIST": 0.45579999685287476,
+            "loss/test/KMNIST": 1.8048228025436401,
+            "normalized_acc/test/KMNIST": 0.46448588371276855
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.6595500111579895,
+            "normalized_acc/test/avg": 0.6906647682189941
+        }
+    ]
+}
