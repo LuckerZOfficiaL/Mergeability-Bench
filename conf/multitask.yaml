@@ -10,7 +10,7 @@ defaults:
   - hydra: default
   - nn: default
   - train: default
-  - merger: weight_avg # iso-c, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
+  - merger: isotropic # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
   - benchmark: N8 # N14, N8, N20
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
@@ -20,9 +20,7 @@ defaults:
 # If true, run pairwise merging evaluation for all pairs in the benchmark, instead of merging all of them and evaluate on all tasks
 all_pairwise: true
 
-# If true, permutation matching is done before merging, with the specified maximum number of iterations.
-perm_matching: true
-perm_matching_max_iter: 25
+alignment: false
 
 seed_index: 0
 num_tasks: ???
@@ -57,7 +55,7 @@ mergeability:
   # benchmark_name: null  # or "custom_2tasks"
 
   # OPTION 2: Use a benchmark (e.g., N2, N8, N14, N20) from ./conf/benchmark
-  benchmark_name: N8  # Used for output filename
+  benchmark_name: N20  # Used for output filename
   datasets: ${benchmark_datasets:${mergeability.benchmark_name}}
 
   metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
@@ -65,7 +63,7 @@ mergeability:
   layer_wise: false  # If true, compute all metrics per-layer (saves full breakdown, logs average)
 
   # Permutation matching configuration
-  perm_matching: true  # If true, apply permutation matching to align task vectors before computing metrics
+  perm_matching: false  # If true, apply permutation matching to align task vectors before computing metrics
   perm_matching_max_iter: 25  # Maximum iterations for permutation matching algorithm
 
   output_path: "${oc.env:PROJECT_ROOT}/results/mergeability/${nn.encoder.model_name}/"

@@ -31,7 +31,6 @@ from model_merging.model.encoder import ClassificationHead, ImageEncoder
 from model_merging.model.heads import (
     get_classification_head,
 )
-from model_merging.perm_matching import apply_permutation_to_task_vectors
 from model_merging.utils.io_utils import (
     boilerplate,
     load_model_from_hf,
@@ -109,50 +108,14 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
     zeroshot_encoder: ImageEncoder = load_model_from_hf(
         model_name=cfg.nn.encoder.model_name
     )
-
+    
     finetuned_models = {
         dataset: load_model_from_hf(
             model_name=cfg.nn.encoder.model_name, dataset_name=dataset.name
         ).state_dict()
         for dataset in datasets
     }
-
-    # Apply permutation matching if requested
-    perm_matching = cfg.get("perm_matching", False)
-    if perm_matching:
-        pylogger.info("Applying permutation matching to align models before merging...")
-
-        pretrained_state_dict = zeroshot_encoder.state_dict()
-
-        # Convert fine-tuned state dicts to task vectors
-        task_dicts = {
-            dataset.name: {
-                k: finetuned_models[dataset][k] - pretrained_state_dict[k]
-                for k in finetuned_models[dataset].keys()
-            }
-            for dataset in datasets
-        }
-
-        # Apply permutation matching to align task vectors
-        aligned_task_dicts = apply_permutation_to_task_vectors(
-            pretrained_state_dict=pretrained_state_dict,
-            task_dicts=task_dicts,
-            model_name=cfg.nn.encoder.model_name,
-            max_iter=cfg.get("perm_matching_max_iter", 100),
-            verbose=True,
-        )
-
-        # Reconstruct fine-tuned models from aligned task vectors
-        finetuned_models = {
-            dataset: {
-                k: pretrained_state_dict[k] + aligned_task_dicts[dataset.name][k]
-                for k in aligned_task_dicts[dataset.name].keys()
-            }
-            for dataset in datasets
-        }
-
-        pylogger.info("Permutation matching completed")
-
+    
     if pair_name:
         pylogger.info(f"=== Evaluating pair: {pair_name} ===")
     pylogger.info(f"Number of tasks: {num_tasks}")
@@ -236,14 +199,11 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
     results_path = Path(cfg.misc.results_path) / merger_name
     results_path.mkdir(parents=True, exist_ok=True)
 
-    # Add suffix for permutation matching if enabled
-    perm_suffix = "_perm_matched" if perm_matching else ""
-
     # Use pair_name for filename if provided, otherwise use num_tasks
     if pair_name:
-        filename = f"pair_{pair_name}{perm_suffix}.json"
+        filename = f"pair_{pair_name}.json"
     else:
-        filename = f"{num_tasks}{perm_suffix}.json"
+        filename = f"{num_tasks}.json"
 
     with open(results_path / filename, "w+") as f:
         json.dump(results, f, indent=4)
@@ -321,13 +281,9 @@ def run(cfg: DictConfig):
     results_path = Path(cfg.misc.results_path) / merger_name
     results_path.mkdir(parents=True, exist_ok=True)
 
-    # Add suffix for permutation matching if enabled
-    perm_matching = cfg.get("perm_matching", False)
-    perm_suffix = "_perm_matched" if perm_matching else ""
-
     # Get benchmark name from config (e.g., "N8", "N20")
     benchmark_name = cfg.benchmark.get("name", f"N{n_datasets}")
-    summary_file = results_path / f"all_pairwise_summary_{benchmark_name}{perm_suffix}.json"
+    summary_file = results_path / f"all_pairwise_summary_{benchmark_name}.json"
     with open(summary_file, "w+") as f:
         json.dump(all_results, f, indent=4)
 

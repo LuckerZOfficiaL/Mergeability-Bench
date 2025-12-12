@@ -8,7 +8,6 @@ between all datasets, returning an NxN triangular matrix structure.
 Usage:
     python scripts/compute_mergeability.py mergeability.metrics=[task_vector_cosine_similarity]
     python scripts/compute_mergeability.py 'mergeability.datasets=[CIFAR10,DTD,MNIST]'
-    python scripts/compute_mergeability.py mergeability.perm_matching=true  # Enable permutation matching
 """
 
 import json
@@ -34,7 +33,6 @@ from model_merging.metrics import (
 )
 from model_merging.utils.io_utils import load_model_from_hf
 from model_merging.utils.utils import compute_task_dict, print_memory
-from model_merging.perm_matching import apply_permutation_to_task_vectors
 
 pylogger = logging.getLogger(__name__)
 
@@ -81,19 +79,6 @@ def run(cfg: DictConfig) -> Dict:
         del finetuned
         torch.cuda.empty_cache()
 
-    # Apply permutation matching if requested
-    perm_matching = cfg.mergeability.get("perm_matching", False)
-    if perm_matching:
-        pylogger.info("Applying permutation matching to align task vectors...")
-        task_dicts = apply_permutation_to_task_vectors(
-            pretrained_state_dict=pretrained_state_dict,
-            task_dicts=task_dicts,
-            model_name=cfg.nn.encoder.model_name,
-            max_iter=cfg.mergeability.get("perm_matching_max_iter", 100),
-            verbose=True,
-        )
-        pylogger.info("Permutation matching completed")
-
     del pretrained_encoder, pretrained_state_dict
     torch.cuda.empty_cache()
 
@@ -115,7 +100,6 @@ def run(cfg: DictConfig) -> Dict:
         "datasets": dataset_names,
         "n_datasets": n_datasets,
         "layer_wise": layer_wise,
-        "perm_matching": perm_matching,
         "metrics": {},
     }
 
@@ -180,14 +164,11 @@ def run(cfg: DictConfig) -> Dict:
     # Use benchmark_name if provided, otherwise fall back to listing datasets
     benchmark_name = cfg.mergeability.get("benchmark_name", None)
 
-    # Add suffix for permutation matching if enabled
-    perm_suffix = "_perm_matched" if perm_matching else ""
-
     if benchmark_name:
-        output_file = output_path / f"pairwise_metrics_{benchmark_name}{perm_suffix}.json"
+        output_file = output_path / f"pairwise_metrics_{benchmark_name}.json"
     else:
         datasets_suffix = "_".join(dataset_names)
-        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}{perm_suffix}.json"
+        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}.json"
 
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
