@@ -302,10 +302,10 @@ def subspace_overlap(
     task_dict_2: Dict[str, torch.Tensor],
     top_k: int = 10,
 ) -> float:
-    """Compute principal subspace overlap between task vectors.
+    """Compute principal left subspace overlap between task vectors.
 
-    Measures how much the principal directions (from SVD) of the two
-    task vectors overlap. High overlap might indicate task compatibility.
+    Measures how much the principal left directions (from SVD, using U matrices)
+    of the two task vectors overlap. High overlap might indicate task compatibility.
 
     Args:
         task_dict_1: First task vector.
@@ -313,7 +313,7 @@ def subspace_overlap(
         top_k: Number of top principal directions to consider.
 
     Returns:
-        Average subspace overlap across all 2D weight matrices.
+        Average left subspace overlap across all 2D weight matrices.
     """
     overlaps = []
 
@@ -352,6 +352,61 @@ def subspace_overlap(
     return sum(overlaps) / len(overlaps)
 
 
+def right_subspace_overlap(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    top_k: int = 10,
+) -> float:
+    """Compute principal right subspace overlap between task vectors.
+
+    Measures how much the principal right directions (from SVD, using V matrices)
+    of the two task vectors overlap. High overlap might indicate task compatibility.
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+        top_k: Number of top principal directions to consider.
+
+    Returns:
+        Average right subspace overlap across all 2D weight matrices.
+    """
+    overlaps = []
+
+    for key in sorted(task_dict_1.keys()):
+        if key not in task_dict_2:
+            continue
+
+        tensor1 = task_dict_1[key]
+        tensor2 = task_dict_2[key]
+
+        # Only process 2D matrices
+        if tensor1.dim() != 2:
+            continue
+
+        # Compute SVD for both
+        try:
+            _, _, v1 = torch.linalg.svd(tensor1.float(), full_matrices=False)
+            _, _, v2 = torch.linalg.svd(tensor2.float(), full_matrices=False)
+        except Exception:
+            continue
+
+        # Take top-k rows of V matrices (V is returned as V^H in torch.linalg.svd)
+        k = min(top_k, v1.shape[0], v2.shape[0])
+        v1_k = v1[:k, :]
+        v2_k = v2[:k, :]
+
+        # Compute subspace overlap using Frobenius norm of V1 @ V2^T
+        # Maximum overlap is sqrt(k) when subspaces are identical
+        product = v1_k @ v2_k.T
+        overlap = torch.norm(product, p='fro').item() / k
+        overlaps.append(overlap)
+
+    if not overlaps:
+        return 0.0
+
+    return sum(overlaps) / len(overlaps)
+
+
 # =============================================================================
 # Metric Registry
 # =============================================================================
@@ -366,6 +421,7 @@ METRIC_REGISTRY: Dict[str, Callable] = {
     "task_vector_magnitude_ratio": task_vector_magnitude_ratio,
     "singular_value_overlap": singular_value_overlap,
     "subspace_overlap": subspace_overlap,
+    "right_subspace_overlap": right_subspace_overlap,
 }
 
 

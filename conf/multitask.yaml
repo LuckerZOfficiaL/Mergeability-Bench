@@ -10,8 +10,8 @@ defaults:
   - hydra: default
   - nn: default
   - train: default
-  - merger: isotropic # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
-  - benchmark: N8 # N14, N8, N20
+  - merger: tsv # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
+  - benchmark: N2 # N14, N8, N20, N2
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
   - override hydra/hydra_logging: none
@@ -20,7 +20,8 @@ defaults:
 # If true, run pairwise merging evaluation for all pairs in the benchmark, instead of merging all of them and evaluate on all tasks
 all_pairwise: true
 
-alignment: false
+# Whether to apply rotation alignment before merging
+alignment: true
 
 seed_index: 0
 num_tasks: ???

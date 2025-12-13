@@ -14,6 +14,7 @@ from model_merging.metrics.mergeability import (
     task_vector_magnitude_ratio,
     singular_value_overlap,
     subspace_overlap,
+    right_subspace_overlap,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "task_vector_magnitude_ratio",
     "singular_value_overlap",
     "subspace_overlap",
+    "right_subspace_overlap",
 ]
