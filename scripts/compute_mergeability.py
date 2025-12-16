@@ -25,6 +25,7 @@ from nn_core.common.utils import seed_index_everything
 
 # Force the execution of __init__.py if this file is executed directly.
 import model_merging  # noqa
+from model_merging.alignment.rotation_alignment import apply_rotation_alignment
 from model_merging.metrics import (
     METRIC_REGISTRY,
     compute_metric,
@@ -66,19 +67,40 @@ def run(cfg: DictConfig) -> Dict:
     pretrained_encoder = load_model_from_hf(model_name=cfg.nn.encoder.model_name)
     pretrained_state_dict = pretrained_encoder.state_dict()
 
-    # Load all fine-tuned models and compute task vectors
-    pylogger.info("Loading fine-tuned models and computing task vectors...")
-    task_dicts = {}
+    # Load all fine-tuned models
+    pylogger.info("Loading fine-tuned models...")
+    finetuned_state_dicts = {}
     for dataset_name in dataset_names:
         pylogger.info(f"  Loading {dataset_name}...")
         finetuned = load_model_from_hf(
             model_name=cfg.nn.encoder.model_name, dataset_name=dataset_name
         )
-        task_dicts[dataset_name] = compute_task_dict(
-            pretrained_state_dict, finetuned.state_dict()
-        )
+        finetuned_state_dicts[dataset_name] = finetuned.state_dict()
         del finetuned
         torch.cuda.empty_cache()
+
+    # Apply rotation symmetry alignment if enabled
+    if cfg.mergeability.get("rot_sym_align", False):
+        pylogger.info("Applying rotation symmetry alignment...")
+        finetuned_state_dicts = apply_rotation_alignment(
+            finetuned_state_dicts=finetuned_state_dicts,
+            model_name=cfg.nn.encoder.model_name,
+            device=cfg.device,
+            logger=pylogger
+        )
+        pylogger.info("Rotation alignment completed.")
+
+    # Compute task vectors from (potentially aligned) fine-tuned models
+    pylogger.info("Computing task vectors...")
+    task_dicts = {}
+    for dataset_name in dataset_names:
+        task_dicts[dataset_name] = compute_task_dict(
+            pretrained_state_dict, finetuned_state_dicts[dataset_name]
+        )
+
+    # Clean up finetuned state dicts to free memory
+    del finetuned_state_dicts
+    torch.cuda.empty_cache()
 
     print_memory("after loading models and computing task vectors")
 
@@ -105,9 +127,10 @@ def run(cfg: DictConfig) -> Dict:
         # Get calibration settings from config
         n_calibration_samples = cfg.mergeability.get("n_calibration_samples", 10)
         calibration_batch_size = cfg.mergeability.get("calibration_batch_size", 32)
+        calibration_random_seed = cfg.mergeability.get("calibration_random_seed", 42)
         layer_name = cfg.mergeability.get("activation_layer_name", "visual.transformer.resblocks.11")
 
-        pylogger.info(f"  Using {n_calibration_samples} samples per dataset")
+        pylogger.info(f"  Using {n_calibration_samples} samples per dataset (random seed: {calibration_random_seed})")
         pylogger.info(f"  Extracting activations from layer: {layer_name}")
 
         # Build dataset configs from the benchmark
@@ -133,6 +156,7 @@ def run(cfg: DictConfig) -> Dict:
             n_samples=n_calibration_samples,
             batch_size=calibration_batch_size,
             device=cfg.device,
+            random_seed=calibration_random_seed,
         )
 
         pylogger.info(f"  Calibration loader built with {len(calibration_loader.dataset)} total samples")

@@ -56,15 +56,25 @@ mergeability:
   # benchmark_name: null  # or "custom_2tasks"
 
   # OPTION 2: Use a benchmark (e.g., N2, N8, N14, N20) from ./conf/benchmark
-  benchmark_name: N20  # Used for output filename
+  benchmark_name: N2  # Used for output filename
   datasets: ${benchmark_datasets:${mergeability.benchmark_name}}
 
   metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
     - all
   layer_wise: false  # If true, compute all metrics per-layer (saves full breakdown, logs average)
 
-  # Permutation matching configuration
-  perm_matching: false  # If true, apply permutation matching to align task vectors before computing metrics
-  perm_matching_max_iter: 25  # Maximum iterations for permutation matching algorithm
+  rot_sym_align: false # Whether to perform rotation symmetry alignment before computing the mergeability metrics
+
+  # Activation-based metrics configuration
+  n_calibration_samples: 10  # Number of samples per dataset for calibration, for N8 it's 80 samples.
+  calibration_batch_size: 32  # Batch size for processing calibration data
+  calibration_random_seed: 42  # Random seed for reproducible calibration sampling
+  activation_layer_name: 'model.visual.transformer.resblocks.11'  # Layer to extract activations from
+  # Options for activation_layer_name (ViT-B-16):
+  #   - 'model.visual.transformer.resblocks.11' (last transformer block, high-level semantic features)
+  #   - 'model.visual.transformer.resblocks.8'  (mid-upper layer, balanced features)
+  #   - 'model.visual.transformer.resblocks.5'  (middle layer, intermediate features)
+  #   - 'model.visual.transformer.resblocks.0'  (first transformer block, low-level features)
+  #   - 'model.visual.ln_post'                  (after all transformer blocks, normalized features)
 
   output_path: "${oc.env:PROJECT_ROOT}/results/mergeability/${nn.encoder.model_name}/"

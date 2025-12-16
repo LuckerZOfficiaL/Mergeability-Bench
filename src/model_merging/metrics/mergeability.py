@@ -420,6 +420,7 @@ def build_calibration_loader(
     n_samples: int = 10,
     batch_size: int = 32,
     device: str = "cuda",
+    random_seed: int = 42,
 ) -> DataLoader:
     """Build a calibration data loader from multiple datasets.
 
@@ -429,15 +430,20 @@ def build_calibration_loader(
         n_samples: Number of samples to take from each dataset's validation set
         batch_size: Batch size for the calibration loader
         device: Device to use
+        random_seed: Random seed for reproducible sampling
 
     Returns:
         DataLoader containing calibration samples from all datasets
     """
     from model_merging.data.dataset import load_dataset
     from hydra.utils import instantiate
+    import random
 
     all_samples = []
     preprocess_fn = pretrained_encoder.val_preprocess
+
+    # Set random seed for reproducibility
+    random.seed(random_seed)
 
     for dataset_cfg in dataset_configs:
         try:
@@ -456,13 +462,16 @@ def build_calibration_loader(
                 classnames_override=dataset_cfg.get("classnames_override", None),
             )
 
-            # Sample n_samples from validation/test set
+            # Sample n_samples from validation/test set randomly
             test_dataset = dataset.test_dataset
             n_available = len(test_dataset)
             n_to_sample = min(n_samples, n_available)
 
-            # Take first n_to_sample items (deterministic)
-            for idx in range(n_to_sample):
+            # Random sampling with fixed seed for reproducibility
+            indices = random.sample(range(n_available), n_to_sample)
+            indices.sort()  # Sort for consistent ordering
+
+            for idx in indices:
                 all_samples.append(test_dataset[idx])
 
         except Exception as e:
