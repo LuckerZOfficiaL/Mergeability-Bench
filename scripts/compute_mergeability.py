@@ -31,6 +31,7 @@ from model_merging.metrics import (
     compute_all_metrics,
     compute_metric_per_layer,
 )
+from model_merging.metrics.mergeability import build_calibration_loader
 from model_merging.utils.io_utils import load_model_from_hf
 from model_merging.utils.utils import compute_task_dict, print_memory
 
@@ -79,15 +80,70 @@ def run(cfg: DictConfig) -> Dict:
         del finetuned
         torch.cuda.empty_cache()
 
-    del pretrained_encoder, pretrained_state_dict
-    torch.cuda.empty_cache()
-
     print_memory("after loading models and computing task vectors")
 
     # Determine which metrics to compute
     metrics_to_compute = list(cfg.mergeability.metrics)
     if metrics_to_compute == ["all"]:
         metrics_to_compute = list(METRIC_REGISTRY.keys())
+
+    # Check if any activation-based metrics are requested
+    activation_metrics = [
+        "activation_l2_distance",
+        "activation_cosine_similarity",
+        "activation_magnitude_ratio",
+        "activation_dot_product",
+    ]
+    needs_activation_data = any(m in metrics_to_compute for m in activation_metrics)
+
+    # Build calibration loader if needed
+    calibration_loader = None
+    layer_name = None
+    if needs_activation_data:
+        pylogger.info("Building calibration data loader for activation metrics...")
+
+        # Get calibration settings from config
+        n_calibration_samples = cfg.mergeability.get("n_calibration_samples", 10)
+        calibration_batch_size = cfg.mergeability.get("calibration_batch_size", 32)
+        layer_name = cfg.mergeability.get("activation_layer_name", "visual.transformer.resblocks.11")
+
+        pylogger.info(f"  Using {n_calibration_samples} samples per dataset")
+        pylogger.info(f"  Extracting activations from layer: {layer_name}")
+
+        # Build dataset configs from the benchmark
+        # We need to load dataset configs dynamically using OmegaConf
+        from omegaconf import OmegaConf
+
+        dataset_configs = []
+        config_dir = PROJECT_ROOT / "conf"
+
+        for dataset_name in dataset_names:
+            # Load the dataset config file
+            dataset_config_path = config_dir / "dataset" / f"{dataset_name}.yaml"
+            if dataset_config_path.exists():
+                dataset_cfg = OmegaConf.load(dataset_config_path)
+                # Note: preprocess_fn will be passed separately to build_calibration_loader
+                dataset_configs.append(dataset_cfg)
+            else:
+                pylogger.warning(f"Dataset config not found: {dataset_config_path}")
+
+        calibration_loader = build_calibration_loader(
+            dataset_configs=dataset_configs,
+            pretrained_encoder=pretrained_encoder,
+            n_samples=n_calibration_samples,
+            batch_size=calibration_batch_size,
+            device=cfg.device,
+        )
+
+        pylogger.info(f"  Calibration loader built with {len(calibration_loader.dataset)} total samples")
+
+    # Clean up pretrained state dict but keep pretrained_encoder if needed for activation metrics
+    if not needs_activation_data:
+        del pretrained_encoder, pretrained_state_dict
+        torch.cuda.empty_cache()
+    else:
+        del pretrained_state_dict
+        torch.cuda.empty_cache()
 
     layer_wise = cfg.mergeability.get("layer_wise", False)
     pylogger.info(f"Computing metrics: {metrics_to_compute}")
@@ -130,32 +186,68 @@ def run(cfg: DictConfig) -> Dict:
                 try:
                     metric_fn = METRIC_REGISTRY[metric_name]
 
-                    if layer_wise:
-                        # Compute per-layer and average
-                        per_layer_values = compute_metric_per_layer(
-                            metric_fn,
-                            task_dicts[name_i],
-                            task_dicts[name_j],
-                        )
-                        import math
-                        valid_values = [v for v in per_layer_values.values() if not math.isnan(v)]
-                        avg_value = sum(valid_values) / len(valid_values) if valid_values else 0.0
+                    # Prepare kwargs for activation metrics
+                    kwargs = {}
+                    if metric_name in activation_metrics:
+                        kwargs = {
+                            "pretrained_model": pretrained_encoder,
+                            "calibration_loader": calibration_loader,
+                            "layer_name": layer_name,
+                            "device": cfg.device,
+                        }
 
-                        # Store average in matrix
-                        results["metrics"][metric_name]["matrix"][i][j] = avg_value
-                        results["metrics"][metric_name]["pairs"][pair_key] = avg_value
-                        # Store per-layer breakdown
-                        results["metrics"][metric_name]["per_layer"][pair_key] = per_layer_values
+                    if layer_wise:
+                        # Note: Layer-wise computation for activation metrics is not supported
+                        # because it would require reconstructing models for each layer
+                        if metric_name in activation_metrics:
+                            pylogger.warning(
+                                f"Layer-wise mode not supported for activation metric {metric_name}, "
+                                "computing aggregate value instead"
+                            )
+                            metric_value = metric_fn(
+                                task_dicts[name_i],
+                                task_dicts[name_j],
+                                **kwargs
+                            )
+                            results["metrics"][metric_name]["matrix"][i][j] = metric_value
+                            results["metrics"][metric_name]["pairs"][pair_key] = metric_value
+                        else:
+                            # Compute per-layer and average for weight-based metrics
+                            per_layer_values = compute_metric_per_layer(
+                                metric_fn,
+                                task_dicts[name_i],
+                                task_dicts[name_j],
+                            )
+                            import math
+                            valid_values = [v for v in per_layer_values.values() if not math.isnan(v)]
+                            avg_value = sum(valid_values) / len(valid_values) if valid_values else 0.0
+
+                            # Store average in matrix
+                            results["metrics"][metric_name]["matrix"][i][j] = avg_value
+                            results["metrics"][metric_name]["pairs"][pair_key] = avg_value
+                            # Store per-layer breakdown
+                            results["metrics"][metric_name]["per_layer"][pair_key] = per_layer_values
                     else:
                         # Normal aggregate computation
-                        metric_value = metric_fn(task_dicts[name_i], task_dicts[name_j])
+                        metric_value = metric_fn(
+                            task_dicts[name_i],
+                            task_dicts[name_j],
+                            **kwargs
+                        )
                         results["metrics"][metric_name]["matrix"][i][j] = metric_value
                         results["metrics"][metric_name]["pairs"][pair_key] = metric_value
 
                 except Exception as e:
                     pylogger.error(f"Failed to compute {metric_name} for {pair_key}: {e}")
+                    import traceback
+                    pylogger.error(traceback.format_exc())
                     results["metrics"][metric_name]["matrix"][i][j] = None
                     results["metrics"][metric_name]["pairs"][pair_key] = None
+
+    # Clean up activation resources if they were used
+    if needs_activation_data:
+        del pretrained_encoder, calibration_loader
+        torch.cuda.empty_cache()
 
     # Save results
     output_path = Path(cfg.mergeability.output_path)
@@ -169,6 +261,38 @@ def run(cfg: DictConfig) -> Dict:
     else:
         datasets_suffix = "_".join(dataset_names)
         output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}.json"
+
+    # Load existing results if file exists and merge new metrics
+    if output_file.exists():
+        pylogger.info(f"Loading existing results from {output_file}")
+        with open(output_file, "r") as f:
+            existing_results = json.load(f)
+
+        # Verify compatibility
+        if existing_results.get("model_name") != results["model_name"]:
+            pylogger.warning(
+                f"Model name mismatch: existing={existing_results.get('model_name')}, "
+                f"current={results['model_name']}"
+            )
+        if existing_results.get("datasets") != results["datasets"]:
+            pylogger.warning(
+                f"Dataset list mismatch: existing={existing_results.get('datasets')}, "
+                f"current={results['datasets']}"
+            )
+
+        # Merge metrics: new metrics will overwrite existing ones if they have the same name
+        for metric_name, metric_data in results["metrics"].items():
+            if metric_name in existing_results["metrics"]:
+                pylogger.info(f"Overwriting existing metric: {metric_name}")
+            else:
+                pylogger.info(f"Adding new metric: {metric_name}")
+            existing_results["metrics"][metric_name] = metric_data
+
+        # Use the merged results
+        results = existing_results
+        pylogger.info(f"Merged results now contain {len(results['metrics'])} metrics")
+    else:
+        pylogger.info(f"No existing results found, creating new file")
 
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
