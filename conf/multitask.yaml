@@ -11,7 +11,7 @@ defaults:
   - nn: default
   - train: default
   - merger: tsv # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
-  - benchmark: N2 # N14, N8, N20, N2
+  - benchmark: N20 # N14, N8, N20, N2
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
   - override hydra/hydra_logging: none
@@ -21,7 +21,7 @@ defaults:
 all_pairwise: true
 
 # Whether to apply rotation alignment before merging
-alignment: true
+alignment: false
 
 seed_index: 0
 num_tasks: ???

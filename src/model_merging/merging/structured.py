@@ -270,19 +270,42 @@ def get_svd_dict(
 
     if svd_path is not None and Path(svd_path).exists():
         pylogger.info(f"Loading precomputed SVD dictionary from: {svd_path}")
-        svd_dict = torch.load(svd_path, map_location="cuda", weights_only=False)
+        try:
+            svd_dict = torch.load(svd_path, map_location="cuda", weights_only=False)
 
-        if set(svd_dict.keys()) == set(datasets):
-            return svd_dict
+            if set(svd_dict.keys()) == set(datasets):
+                return svd_dict
 
-        pylogger.warning("Mismatch in datasets. Recomputing SVD dictionary...")
+            pylogger.warning("Mismatch in datasets. Recomputing SVD dictionary...")
+        except Exception as e:
+            pylogger.error(f"Failed to load SVD dictionary (file may be corrupted): {e}")
+            pylogger.info("Removing corrupted file and recomputing from scratch...")
+            import os
+            try:
+                os.remove(svd_path)
+            except:
+                pass
 
     else:
         pylogger.info("No precomputed SVD dictionary found. Computing from scratch...")
 
     svd_dict = decompose_task_vectors(task_dicts, compression_ratio)
-    torch.save(svd_dict, svd_path)
-    pylogger.info(f"SVD dictionary saved at: {svd_path}")
+
+    # Atomic write: save to temp file first, then rename to avoid corruption
+    import tempfile
+    import os
+    temp_fd, temp_path = tempfile.mkstemp(suffix='.pt', dir=svd_path.parent)
+    try:
+        os.close(temp_fd)  # Close the file descriptor, we'll use the path
+        torch.save(svd_dict, temp_path)
+        # Atomic rename (on Unix systems)
+        os.replace(temp_path, svd_path)
+        pylogger.info(f"SVD dictionary saved at: {svd_path}")
+    except Exception as e:
+        # Clean up temp file if something went wrong
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise e
 
     return svd_dict
 

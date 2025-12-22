@@ -208,6 +208,7 @@ def run(cfg: DictConfig) -> Dict:
 
             for metric_name in metrics_to_compute:
                 try:
+                    pylogger.info(f"    Computing {metric_name}...")
                     metric_fn = METRIC_REGISTRY[metric_name]
 
                     # Prepare kwargs for activation metrics
@@ -235,6 +236,7 @@ def run(cfg: DictConfig) -> Dict:
                             )
                             results["metrics"][metric_name]["matrix"][i][j] = metric_value
                             results["metrics"][metric_name]["pairs"][pair_key] = metric_value
+                            pylogger.info(f"      ✓ {metric_name} = {metric_value}")
                         else:
                             # Compute per-layer and average for weight-based metrics
                             per_layer_values = compute_metric_per_layer(
@@ -251,6 +253,7 @@ def run(cfg: DictConfig) -> Dict:
                             results["metrics"][metric_name]["pairs"][pair_key] = avg_value
                             # Store per-layer breakdown
                             results["metrics"][metric_name]["per_layer"][pair_key] = per_layer_values
+                            pylogger.info(f"      ✓ {metric_name} = {avg_value} (avg of {len(valid_values)} layers)")
                     else:
                         # Normal aggregate computation
                         metric_value = metric_fn(
@@ -260,6 +263,7 @@ def run(cfg: DictConfig) -> Dict:
                         )
                         results["metrics"][metric_name]["matrix"][i][j] = metric_value
                         results["metrics"][metric_name]["pairs"][pair_key] = metric_value
+                        pylogger.info(f"      ✓ {metric_name} = {metric_value}")
 
                 except Exception as e:
                     pylogger.error(f"Failed to compute {metric_name} for {pair_key}: {e}")
