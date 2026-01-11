@@ -358,21 +358,26 @@ def right_subspace_overlap(
     task_dict_1: Dict[str, torch.Tensor],
     task_dict_2: Dict[str, torch.Tensor],
     top_k: int = 10,
-) -> float:
-    """Compute principal right subspace overlap between task vectors.
+) -> Tuple[float, float]:
+    """Compute principal right subspace overlap between task vectors for both top-k and bottom-k.
 
     Measures how much the principal right directions (from SVD, using V matrices)
     of the two task vectors overlap. High overlap might indicate task compatibility.
+    This metric computes overlap for both the strongest (top-k) and weakest (bottom-k)
+    singular vectors.
 
     Args:
         task_dict_1: First task vector.
         task_dict_2: Second task vector.
-        top_k: Number of top principal directions to consider.
+        top_k: Number of principal directions to consider from top and bottom.
 
     Returns:
-        Average right subspace overlap across all 2D weight matrices.
+        Tuple of (top_k_overlap, bottom_k_overlap):
+        - top_k_overlap: Average right subspace overlap using top-k singular vectors
+        - bottom_k_overlap: Average right subspace overlap using bottom-k singular vectors
     """
-    overlaps = []
+    top_overlaps = []
+    bottom_overlaps = []
 
     for key in sorted(task_dict_1.keys()):
         if key not in task_dict_2:
@@ -387,26 +392,131 @@ def right_subspace_overlap(
 
         # Compute SVD for both
         try:
-            _, _, v1 = torch.linalg.svd(tensor1.float(), full_matrices=False)
-            _, _, v2 = torch.linalg.svd(tensor2.float(), full_matrices=False)
+            _, s1, v1 = torch.linalg.svd(tensor1.float(), full_matrices=False)
+            _, s2, v2 = torch.linalg.svd(tensor2.float(), full_matrices=False)
         except Exception:
             continue
 
-        # Take top-k rows of V matrices (V is returned as V^H in torch.linalg.svd)
+        # Determine k for this layer
         k = min(top_k, v1.shape[0], v2.shape[0])
-        v1_k = v1[:k, :]
-        v2_k = v2[:k, :]
 
-        # Compute subspace overlap using Frobenius norm of V1 @ V2^T
+        # Top-k: Take first k rows of V matrices (V is returned as V^H in torch.linalg.svd)
+        v1_top_k = v1[:k, :]
+        v2_top_k = v2[:k, :]
+
+        # Compute top-k subspace overlap using Frobenius norm of V1 @ V2^T
         # Maximum overlap is sqrt(k) when subspaces are identical
-        product = v1_k @ v2_k.T
-        overlap = torch.norm(product, p='fro').item() / k
-        overlaps.append(overlap)
+        product_top = v1_top_k @ v2_top_k.T
+        overlap_top = torch.norm(product_top, p='fro').item() / (k ** 0.5)
+        top_overlaps.append(overlap_top)
 
-    if not overlaps:
-        return 0.0
+        # Bottom-k: Take last k rows of V matrices (weakest singular vectors)
+        v1_bottom_k = v1[-k:, :]
+        v2_bottom_k = v2[-k:, :]
 
-    return sum(overlaps) / len(overlaps)
+        # Compute bottom-k subspace overlap
+        product_bottom = v1_bottom_k @ v2_bottom_k.T
+        overlap_bottom = torch.norm(product_bottom, p='fro').item() / (k ** 0.5)
+        bottom_overlaps.append(overlap_bottom)
+
+    if not top_overlaps:
+        return 0.0, 0.0
+
+    avg_top = sum(top_overlaps) / len(top_overlaps)
+    avg_bottom = sum(bottom_overlaps) / len(bottom_overlaps)
+
+    return avg_top, avg_bottom
+
+
+def interaction_matrix_overlap(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    top_k: int = 10,
+) -> Tuple[float, float]:
+    """Compute interaction matrix overlap between task vectors for both top-k and bottom-k.
+
+    For each layer, computes the interaction matrix M = V_A^T @ V_B where V_A and V_B
+    are the right singular vectors. The singular values of M represent the cosines of
+    principal angles between the subspaces. The metric returns the average of squared
+    singular values, computed separately for top-k and bottom-k singular vectors.
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+        top_k: Number of principal directions to consider from top and bottom.
+
+    Returns:
+        Tuple of (top_k_overlap, bottom_k_overlap):
+        - top_k_overlap: Average of squared singular values using top-k singular vectors
+        - bottom_k_overlap: Average of squared singular values using bottom-k singular vectors
+    """
+    top_overlaps = []
+    bottom_overlaps = []
+
+    for key in sorted(task_dict_1.keys()):
+        if key not in task_dict_2:
+            continue
+
+        tensor1 = task_dict_1[key]
+        tensor2 = task_dict_2[key]
+
+        # Only process 2D matrices
+        if tensor1.dim() != 2:
+            continue
+
+        # Compute SVD for both
+        try:
+            _, s1, v1 = torch.linalg.svd(tensor1.float(), full_matrices=False)
+            _, s2, v2 = torch.linalg.svd(tensor2.float(), full_matrices=False)
+        except Exception:
+            continue
+
+        # Determine k for this layer
+        k = min(top_k, v1.shape[0], v2.shape[0])
+
+        # Top-k: Take first k rows of V matrices
+        v1_top_k = v1[:k, :]
+        v2_top_k = v2[:k, :]
+
+        # Compute interaction matrix M = V_A^T @ V_B
+        # v1_top_k has shape (k, n), v2_top_k has shape (k, n)
+        # M = v1_top_k @ v2_top_k.T has shape (k, k)
+        interaction_matrix_top = v1_top_k @ v2_top_k.T
+
+        # Compute SVD on interaction matrix to get singular values
+        try:
+            _, sigma_top, _ = torch.linalg.svd(interaction_matrix_top, full_matrices=False)
+        except Exception:
+            continue
+
+        # Average of squared singular values
+        overlap_top = torch.mean(sigma_top ** 2).item()
+        top_overlaps.append(overlap_top)
+
+        # Bottom-k: Take last k rows of V matrices (weakest singular vectors)
+        v1_bottom_k = v1[-k:, :]
+        v2_bottom_k = v2[-k:, :]
+
+        # Compute interaction matrix for bottom-k
+        interaction_matrix_bottom = v1_bottom_k @ v2_bottom_k.T
+
+        # Compute SVD on interaction matrix
+        try:
+            _, sigma_bottom, _ = torch.linalg.svd(interaction_matrix_bottom, full_matrices=False)
+        except Exception:
+            continue
+
+        # Average of squared singular values
+        overlap_bottom = torch.mean(sigma_bottom ** 2).item()
+        bottom_overlaps.append(overlap_bottom)
+
+    if not top_overlaps:
+        return 0.0, 0.0
+
+    avg_top = sum(top_overlaps) / len(top_overlaps)
+    avg_bottom = sum(bottom_overlaps) / len(bottom_overlaps)
+
+    return avg_top, avg_bottom
 
 
 # =============================================================================
@@ -812,6 +922,47 @@ def activation_dot_product(
 # =============================================================================
 
 
+# Wrapper functions for metrics that return tuples
+def right_subspace_overlap_top_k(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    top_k: int = 10,
+) -> float:
+    """Wrapper for right_subspace_overlap returning only top-k overlap."""
+    top_overlap, _ = right_subspace_overlap(task_dict_1, task_dict_2, top_k)
+    return top_overlap
+
+
+def right_subspace_overlap_bottom_k(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    top_k: int = 10,
+) -> float:
+    """Wrapper for right_subspace_overlap returning only bottom-k overlap."""
+    _, bottom_overlap = right_subspace_overlap(task_dict_1, task_dict_2, top_k)
+    return bottom_overlap
+
+
+def interaction_matrix_overlap_top_k(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    top_k: int = 10,
+) -> float:
+    """Wrapper for interaction_matrix_overlap returning only top-k overlap."""
+    top_overlap, _ = interaction_matrix_overlap(task_dict_1, task_dict_2, top_k)
+    return top_overlap
+
+
+def interaction_matrix_overlap_bottom_k(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    top_k: int = 10,
+) -> float:
+    """Wrapper for interaction_matrix_overlap returning only bottom-k overlap."""
+    _, bottom_overlap = interaction_matrix_overlap(task_dict_1, task_dict_2, top_k)
+    return bottom_overlap
+
+
 # Update this registry when you add new metrics!
 METRIC_REGISTRY: Dict[str, Callable] = {
     # Weight-based metrics
@@ -822,7 +973,10 @@ METRIC_REGISTRY: Dict[str, Callable] = {
     "task_vector_magnitude_ratio": task_vector_magnitude_ratio,
     "singular_value_overlap": singular_value_overlap,
     "subspace_overlap": subspace_overlap,
-    "right_subspace_overlap": right_subspace_overlap,
+    "right_subspace_overlap_top_k": right_subspace_overlap_top_k,
+    "right_subspace_overlap_bottom_k": right_subspace_overlap_bottom_k,
+    "interaction_matrix_overlap_top_k": interaction_matrix_overlap_top_k,
+    "interaction_matrix_overlap_bottom_k": interaction_matrix_overlap_bottom_k,
     # Activation-based metrics
     "activation_l2_distance": activation_l2_distance,
     "activation_cosine_similarity": activation_cosine_similarity,

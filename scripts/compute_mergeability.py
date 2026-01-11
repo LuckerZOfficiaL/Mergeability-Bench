@@ -283,12 +283,16 @@ def run(cfg: DictConfig) -> Dict:
 
     # Use benchmark_name if provided, otherwise fall back to listing datasets
     benchmark_name = cfg.mergeability.get("benchmark_name", None)
+    rot_sym_align = cfg.mergeability.get("rot_sym_align", False)
+
+    # Add rotation alignment suffix if enabled
+    rot_suffix = "_rot_aligned" if rot_sym_align else ""
 
     if benchmark_name:
-        output_file = output_path / f"pairwise_metrics_{benchmark_name}.json"
+        output_file = output_path / f"pairwise_metrics_{benchmark_name}{rot_suffix}.json"
     else:
         datasets_suffix = "_".join(dataset_names)
-        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}.json"
+        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}{rot_suffix}.json"
 
     # Load existing results if file exists and merge new metrics
     if output_file.exists():

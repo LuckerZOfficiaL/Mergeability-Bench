@@ -21,7 +21,7 @@ defaults:
 all_pairwise: true
 
 # Whether to apply rotation alignment before merging
-alignment: false
+alignment: true
 
 seed_index: 0
 num_tasks: ???
@@ -56,7 +56,7 @@ mergeability:
   # benchmark_name: null  # or "custom_2tasks"
 
   # OPTION 2: Use a benchmark (e.g., N2, N8, N14, N20) from ./conf/benchmark
-  benchmark_name: N2  # Used for output filename
+  benchmark_name: N8  # Used for output filename
   datasets: ${benchmark_datasets:${mergeability.benchmark_name}}
 
   metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
