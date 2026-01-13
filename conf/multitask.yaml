@@ -56,12 +56,12 @@ mergeability:
   # benchmark_name: null  # or "custom_2tasks"
 
   # OPTION 2: Use a benchmark (e.g., N2, N8, N14, N20) from ./conf/benchmark
-  benchmark_name: N8  # Used for output filename
+  benchmark_name: N20  # Used for output filename
   datasets: ${benchmark_datasets:${mergeability.benchmark_name}}
 
   metrics: # see options in ./src/model_merging/metrics/mergeability.py, or use "all" to run all metrics.
     - all
-  layer_wise: false  # If true, compute all metrics per-layer (saves full breakdown, logs average)
+  layer_wise: false  # If true, compute all metrics per-layer (saves full breakdown, logs average) THIS IS DEPRECATED!!! SOME METRICS ARE ALREADY LAYER-WISE EVEN WITHOUT THIS FLAG
 
   rot_sym_align: false # Whether to perform rotation symmetry alignment before computing the mergeability metrics
 
@@ -78,3 +78,14 @@ mergeability:
   #   - 'model.visual.ln_post'                  (after all transformer blocks, normalized features)
 
   output_path: "${oc.env:PROJECT_ROOT}/results/mergeability/${nn.encoder.model_name}/"
+
+# Metric linear optimization configuration
+metric_linear_optimization:
+  validation_split: 0.2  # Fraction of pairs to use for validation (0.0 to 1.0)
+  random_seed: 42  # Random seed for reproducible train/val splitting
+  iterations: 1000  # Number of optimization iterations
+  learning_rate: 0.01  # Learning rate for Adam optimizer
+  convergence_threshold: 0.0001  # Stop if improvement < threshold for 'patience' iterations
+  patience: 50  # Number of iterations without improvement before stopping
+  target_metric: 'acc/test/avg'  # Performance metric to correlate with
+  output_path: "${oc.env:PROJECT_ROOT}/results/metric_linear_optimization/"

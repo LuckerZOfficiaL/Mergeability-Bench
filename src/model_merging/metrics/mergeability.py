@@ -240,6 +240,280 @@ def task_vector_magnitude_ratio(
 # =============================================================================
 
 
+def effective_rank(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute effective rank (participation ratio) of the two task vectors.
+
+    The effective rank measures the intrinsic dimensionality of the subspace
+    spanned by the two task vectors. It is computed using the entropy of the
+    normalized singular value distribution.
+
+    Effective Rank = exp(H(p)) where H(p) = -Σ p_i log(p_i)
+    and p_i = σ_i / Σσ_j (normalized singular values)
+
+    Interpretation:
+        - Effective rank ≈ 1.0: Task vectors are highly aligned (excellent mergeability)
+        - Effective rank ≈ 1.5: Moderate alignment (good mergeability)
+        - Effective rank ≈ 2.0: Task vectors are orthogonal (poor mergeability)
+
+    This metric is based on the hypothesis that models lying in the linear
+    tangent space of the pretrained model should have aligned task vectors,
+    resulting in low effective rank.
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Effective rank value in [1, 2].
+    """
+    vec1 = flatten_task_dict(task_dict_1)
+    vec2 = flatten_task_dict(task_dict_2)
+
+    # Stack as matrix (2 × D)
+    task_matrix = torch.stack([vec1, vec2], dim=0)
+
+    # Compute SVD
+    try:
+        _, S, _ = torch.linalg.svd(task_matrix, full_matrices=False)
+    except Exception:
+        return 2.0  # Return worst case on failure
+
+    # Normalize singular values to form probability distribution
+    S_normalized = S / (S.sum() + 1e-10)
+
+    # Compute entropy
+    entropy = -(S_normalized * torch.log(S_normalized + 1e-10)).sum()
+
+    # Effective rank
+    eff_rank = torch.exp(entropy).item()
+
+    return eff_rank
+
+
+def effective_rank_mergeability_score(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute mergeability score from effective rank (mapped to [0, 1]).
+
+    This is a normalized version of effective_rank where:
+        - Score = 1.0 means perfect alignment (effective rank = 1.0)
+        - Score = 0.0 means orthogonal (effective rank = 2.0)
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Mergeability score in [0, 1], where higher is better.
+    """
+    eff_rank = effective_rank(task_dict_1, task_dict_2)
+
+    # Map [1, 2] to [1, 0]
+    score = 2.0 - eff_rank
+    score = max(0.0, min(1.0, score))
+
+    return score
+
+
+def stable_rank(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute stable rank of the two task vectors.
+
+    Stable rank is an alternative measure of effective dimensionality:
+    Stable Rank = (Σσ_i)² / Σσ_i²
+
+    This is related to effective rank but uses L2 norm instead of entropy.
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Stable rank value in [1, 2].
+    """
+    vec1 = flatten_task_dict(task_dict_1)
+    vec2 = flatten_task_dict(task_dict_2)
+
+    # Stack as matrix (2 × D)
+    task_matrix = torch.stack([vec1, vec2], dim=0)
+
+    # Compute SVD
+    try:
+        _, S, _ = torch.linalg.svd(task_matrix, full_matrices=False)
+    except Exception:
+        return 2.0
+
+    # Stable rank = (sum of singular values)^2 / sum of squared singular values
+    s_rank = (S.sum() ** 2) / ((S ** 2).sum() + 1e-10)
+
+    return s_rank.item()
+
+
+def spectral_gap(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute spectral gap between the two largest singular values.
+
+    The spectral gap measures the difference between the first and second
+    singular values, normalized by the first. A large gap indicates strong
+    alignment (one dominant direction).
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Spectral gap in [0, 1], where larger means better alignment.
+    """
+    vec1 = flatten_task_dict(task_dict_1)
+    vec2 = flatten_task_dict(task_dict_2)
+
+    # Stack as matrix (2 × D)
+    task_matrix = torch.stack([vec1, vec2], dim=0)
+
+    # Compute SVD
+    try:
+        _, S, _ = torch.linalg.svd(task_matrix, full_matrices=False)
+    except Exception:
+        return 0.0
+
+    if len(S) < 2:
+        return 1.0  # Only one singular value means perfect alignment
+
+    # Spectral gap = (σ_1 - σ_2) / σ_1
+    gap = (S[0] - S[1]) / (S[0] + 1e-10)
+
+    return gap.item()
+
+
+def singular_value_ratio(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute ratio of second to first singular value.
+
+    This is complementary to spectral_gap. A small ratio indicates
+    strong alignment (second direction is weak).
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Ratio in [0, 1], where smaller means better alignment.
+    """
+    vec1 = flatten_task_dict(task_dict_1)
+    vec2 = flatten_task_dict(task_dict_2)
+
+    # Stack as matrix (2 × D)
+    task_matrix = torch.stack([vec1, vec2], dim=0)
+
+    # Compute SVD
+    try:
+        _, S, _ = torch.linalg.svd(task_matrix, full_matrices=False)
+    except Exception:
+        return 1.0
+
+    if len(S) < 2:
+        return 0.0  # Only one singular value means perfect alignment
+
+    # Ratio = σ_2 / σ_1
+    ratio = S[1] / (S[0] + 1e-10)
+
+    return ratio.item()
+
+
+def layerwise_effective_rank(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute weighted average effective rank across all layers.
+
+    This computes the effective rank for each layer separately, then
+    takes a weighted average based on the magnitude of updates in each layer.
+    This provides more granular insight than global effective rank.
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Weighted average effective rank across layers.
+    """
+    layers_1 = get_layer_vectors(task_dict_1)
+    layers_2 = get_layer_vectors(task_dict_2)
+
+    common_keys = set(layers_1.keys()) & set(layers_2.keys())
+
+    layer_ranks = []
+    layer_weights = []
+
+    for key in sorted(common_keys):
+        delta_A = layers_1[key]
+        delta_B = layers_2[key]
+
+        # Skip if no updates
+        if delta_A.norm() < 1e-10 or delta_B.norm() < 1e-10:
+            continue
+
+        # Stack and compute SVD
+        layer_matrix = torch.stack([delta_A, delta_B])
+
+        try:
+            _, S, _ = torch.linalg.svd(layer_matrix, full_matrices=False)
+        except Exception:
+            continue
+
+        # Effective rank for this layer
+        S_norm = S / (S.sum() + 1e-10)
+        entropy = -(S_norm * torch.log(S_norm + 1e-10)).sum()
+        eff_rank = torch.exp(entropy).item()
+
+        # Weight by total update magnitude
+        weight = (delta_A.norm() + delta_B.norm()).item()
+
+        layer_ranks.append(eff_rank)
+        layer_weights.append(weight)
+
+    if not layer_ranks:
+        return 2.0  # Return worst case if no valid layers
+
+    # Weighted average
+    total_weight = sum(layer_weights)
+    weighted_avg = sum(r * w for r, w in zip(layer_ranks, layer_weights)) / total_weight
+
+    return weighted_avg
+
+
+def layerwise_effective_rank_mergeability_score(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+) -> float:
+    """Compute mergeability score from layerwise effective rank (mapped to [0, 1]).
+
+    Args:
+        task_dict_1: First task vector.
+        task_dict_2: Second task vector.
+
+    Returns:
+        Mergeability score in [0, 1], where higher is better.
+    """
+    eff_rank = layerwise_effective_rank(task_dict_1, task_dict_2)
+
+    # Map [1, 2] to [1, 0]
+    score = 2.0 - eff_rank
+    score = max(0.0, min(1.0, score))
+
+    return score
+
+
 def singular_value_overlap(
     task_dict_1: Dict[str, torch.Tensor],
     task_dict_2: Dict[str, torch.Tensor],
@@ -971,8 +1245,19 @@ METRIC_REGISTRY: Dict[str, Callable] = {
     "task_vector_dot_product": task_vector_dot_product,
     "weight_space_angle": weight_space_angle,
     "task_vector_magnitude_ratio": task_vector_magnitude_ratio,
+    # Effective rank metrics (tangent space alignment)
+    "effective_rank": effective_rank,
+    "effective_rank_mergeability_score": effective_rank_mergeability_score,
+    "stable_rank": stable_rank,
+    "spectral_gap": spectral_gap,
+    "singular_value_ratio": singular_value_ratio,
+    "layerwise_effective_rank": layerwise_effective_rank,
+    "layerwise_effective_rank_mergeability_score": layerwise_effective_rank_mergeability_score,
+    # SVD-based subspace metrics
     "singular_value_overlap": singular_value_overlap,
     "subspace_overlap": subspace_overlap,
+    "right_subspace_overlap": right_subspace_overlap,
+    "interaction_matrix_overlap": interaction_matrix_overlap,
     "right_subspace_overlap_top_k": right_subspace_overlap_top_k,
     "right_subspace_overlap_bottom_k": right_subspace_overlap_bottom_k,
     "interaction_matrix_overlap_top_k": interaction_matrix_overlap_top_k,
@@ -982,6 +1267,12 @@ METRIC_REGISTRY: Dict[str, Callable] = {
     "activation_cosine_similarity": activation_cosine_similarity,
     "activation_magnitude_ratio": activation_magnitude_ratio,
     "activation_dot_product": activation_dot_product,
+}
+
+# Registry for metrics that return tuples (metric_name -> list of output names)
+TUPLE_METRICS: Dict[str, List[str]] = {
+    "right_subspace_overlap": ["right_subspace_overlap_top_k", "right_subspace_overlap_bottom_k"],
+    "interaction_matrix_overlap": ["interaction_matrix_overlap_top_k", "interaction_matrix_overlap_bottom_k"],
 }
 
 

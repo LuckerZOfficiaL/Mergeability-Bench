@@ -32,6 +32,7 @@ from model_merging.metrics import (
     compute_all_metrics,
     compute_metric_per_layer,
 )
+from model_merging.metrics.mergeability import TUPLE_METRICS
 from model_merging.metrics.mergeability import build_calibration_loader
 from model_merging.utils.io_utils import load_model_from_hf
 from model_merging.utils.utils import compute_task_dict, print_memory
@@ -109,6 +110,16 @@ def run(cfg: DictConfig) -> Dict:
     if metrics_to_compute == ["all"]:
         metrics_to_compute = list(METRIC_REGISTRY.keys())
 
+    # Expand tuple metrics: if user specifies a tuple metric, automatically compute all its outputs
+    expanded_metrics = []
+    for metric_name in metrics_to_compute:
+        if metric_name in TUPLE_METRICS:
+            # Add the base tuple metric name
+            expanded_metrics.append(metric_name)
+        else:
+            expanded_metrics.append(metric_name)
+    metrics_to_compute = expanded_metrics
+
     # Check if any activation-based metrics are requested
     activation_metrics = [
         "activation_l2_distance",
@@ -185,13 +196,23 @@ def run(cfg: DictConfig) -> Dict:
 
     # Initialize matrices for each metric
     for metric_name in metrics_to_compute:
-        # Initialize NxN matrix with None (will be upper triangular)
-        results["metrics"][metric_name] = {
-            "matrix": [[None for _ in range(n_datasets)] for _ in range(n_datasets)],
-            "pairs": {},  # Also store as dict for easy lookup
-        }
-        if layer_wise:
-            results["metrics"][metric_name]["per_layer"] = {}
+        # Check if this is a tuple metric - if so, initialize storage for all outputs
+        if metric_name in TUPLE_METRICS:
+            for output_name in TUPLE_METRICS[metric_name]:
+                results["metrics"][output_name] = {
+                    "matrix": [[None for _ in range(n_datasets)] for _ in range(n_datasets)],
+                    "pairs": {},  # Also store as dict for easy lookup
+                }
+                if layer_wise:
+                    results["metrics"][output_name]["per_layer"] = {}
+        else:
+            # Initialize NxN matrix with None (will be upper triangular)
+            results["metrics"][metric_name] = {
+                "matrix": [[None for _ in range(n_datasets)] for _ in range(n_datasets)],
+                "pairs": {},  # Also store as dict for easy lookup
+            }
+            if layer_wise:
+                results["metrics"][metric_name]["per_layer"] = {}
 
     # Compute pairwise metrics
     n_pairs = n_datasets * (n_datasets - 1) // 2
@@ -221,6 +242,9 @@ def run(cfg: DictConfig) -> Dict:
                             "device": cfg.device,
                         }
 
+                    # Check if this is a tuple-returning metric
+                    is_tuple_metric = metric_name in TUPLE_METRICS
+
                     if layer_wise:
                         # Note: Layer-wise computation for activation metrics is not supported
                         # because it would require reconstructing models for each layer
@@ -234,9 +258,18 @@ def run(cfg: DictConfig) -> Dict:
                                 task_dicts[name_j],
                                 **kwargs
                             )
-                            results["metrics"][metric_name]["matrix"][i][j] = metric_value
-                            results["metrics"][metric_name]["pairs"][pair_key] = metric_value
-                            pylogger.info(f"      ✓ {metric_name} = {metric_value}")
+                            if is_tuple_metric:
+                                # Handle tuple return
+                                output_names = TUPLE_METRICS[metric_name]
+                                for idx, output_name in enumerate(output_names):
+                                    val = metric_value[idx]
+                                    results["metrics"][output_name]["matrix"][i][j] = val
+                                    results["metrics"][output_name]["pairs"][pair_key] = val
+                                    pylogger.info(f"      ✓ {output_name} = {val}")
+                            else:
+                                results["metrics"][metric_name]["matrix"][i][j] = metric_value
+                                results["metrics"][metric_name]["pairs"][pair_key] = metric_value
+                                pylogger.info(f"      ✓ {metric_name} = {metric_value}")
                         else:
                             # Compute per-layer and average for weight-based metrics
                             per_layer_values = compute_metric_per_layer(
@@ -245,15 +278,32 @@ def run(cfg: DictConfig) -> Dict:
                                 task_dicts[name_j],
                             )
                             import math
-                            valid_values = [v for v in per_layer_values.values() if not math.isnan(v)]
-                            avg_value = sum(valid_values) / len(valid_values) if valid_values else 0.0
 
-                            # Store average in matrix
-                            results["metrics"][metric_name]["matrix"][i][j] = avg_value
-                            results["metrics"][metric_name]["pairs"][pair_key] = avg_value
-                            # Store per-layer breakdown
-                            results["metrics"][metric_name]["per_layer"][pair_key] = per_layer_values
-                            pylogger.info(f"      ✓ {metric_name} = {avg_value} (avg of {len(valid_values)} layers)")
+                            if is_tuple_metric:
+                                # Handle tuple returns for layer-wise computation
+                                output_names = TUPLE_METRICS[metric_name]
+                                # per_layer_values is a dict where each value is a tuple
+                                for idx, output_name in enumerate(output_names):
+                                    # Extract the idx-th element from each tuple
+                                    per_layer_single = {k: v[idx] if isinstance(v, tuple) else v
+                                                       for k, v in per_layer_values.items()}
+                                    valid_values = [v for v in per_layer_single.values() if not math.isnan(v)]
+                                    avg_value = sum(valid_values) / len(valid_values) if valid_values else 0.0
+
+                                    results["metrics"][output_name]["matrix"][i][j] = avg_value
+                                    results["metrics"][output_name]["pairs"][pair_key] = avg_value
+                                    results["metrics"][output_name]["per_layer"][pair_key] = per_layer_single
+                                    pylogger.info(f"      ✓ {output_name} = {avg_value} (avg of {len(valid_values)} layers)")
+                            else:
+                                valid_values = [v for v in per_layer_values.values() if not math.isnan(v)]
+                                avg_value = sum(valid_values) / len(valid_values) if valid_values else 0.0
+
+                                # Store average in matrix
+                                results["metrics"][metric_name]["matrix"][i][j] = avg_value
+                                results["metrics"][metric_name]["pairs"][pair_key] = avg_value
+                                # Store per-layer breakdown
+                                results["metrics"][metric_name]["per_layer"][pair_key] = per_layer_values
+                                pylogger.info(f"      ✓ {metric_name} = {avg_value} (avg of {len(valid_values)} layers)")
                     else:
                         # Normal aggregate computation
                         metric_value = metric_fn(
@@ -261,16 +311,31 @@ def run(cfg: DictConfig) -> Dict:
                             task_dicts[name_j],
                             **kwargs
                         )
-                        results["metrics"][metric_name]["matrix"][i][j] = metric_value
-                        results["metrics"][metric_name]["pairs"][pair_key] = metric_value
-                        pylogger.info(f"      ✓ {metric_name} = {metric_value}")
+
+                        if is_tuple_metric:
+                            # Handle tuple return
+                            output_names = TUPLE_METRICS[metric_name]
+                            for idx, output_name in enumerate(output_names):
+                                val = metric_value[idx]
+                                results["metrics"][output_name]["matrix"][i][j] = val
+                                results["metrics"][output_name]["pairs"][pair_key] = val
+                                pylogger.info(f"      ✓ {output_name} = {val}")
+                        else:
+                            results["metrics"][metric_name]["matrix"][i][j] = metric_value
+                            results["metrics"][metric_name]["pairs"][pair_key] = metric_value
+                            pylogger.info(f"      ✓ {metric_name} = {metric_value}")
 
                 except Exception as e:
                     pylogger.error(f"Failed to compute {metric_name} for {pair_key}: {e}")
                     import traceback
                     pylogger.error(traceback.format_exc())
-                    results["metrics"][metric_name]["matrix"][i][j] = None
-                    results["metrics"][metric_name]["pairs"][pair_key] = None
+                    if metric_name in TUPLE_METRICS:
+                        for output_name in TUPLE_METRICS[metric_name]:
+                            results["metrics"][output_name]["matrix"][i][j] = None
+                            results["metrics"][output_name]["pairs"][pair_key] = None
+                    else:
+                        results["metrics"][metric_name]["matrix"][i][j] = None
+                        results["metrics"][metric_name]["pairs"][pair_key] = None
 
     # Clean up activation resources if they were used
     if needs_activation_data:
@@ -339,7 +404,15 @@ def run(cfg: DictConfig) -> Dict:
     pylogger.info(f"Total pairs computed: {n_pairs}")
     pylogger.info("")
 
+    # Build list of all metrics to display (expand tuple metrics to their outputs)
+    metrics_to_display = []
     for metric_name in metrics_to_compute:
+        if metric_name in TUPLE_METRICS:
+            metrics_to_display.extend(TUPLE_METRICS[metric_name])
+        else:
+            metrics_to_display.append(metric_name)
+
+    for metric_name in metrics_to_display:
         suffix = " (layer-wise avg)" if layer_wise else ""
         pylogger.info(f"{metric_name}{suffix}:")
         # Print matrix in a readable format
