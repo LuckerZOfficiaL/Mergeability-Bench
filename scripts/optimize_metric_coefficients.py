@@ -13,6 +13,9 @@ import argparse
 from pathlib import Path
 from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 
 
 def load_metrics(metrics_path):
@@ -327,6 +330,50 @@ def verify_correlation(coefficients, metrics_normalized, performance):
     return corr, p_value
 
 
+def plot_scatter(coefficients, metrics_normalized, performance,
+                 output_path, split_name, corr, p_value):
+    """
+    Create scatter plot of predicted vs actual performance.
+
+    Args:
+        coefficients: Optimized coefficients
+        metrics_normalized: Normalized metrics
+        performance: Actual performance values
+        output_path: Path to save the plot
+        split_name: Name of the split (e.g., 'train', 'validation', 'full')
+        corr: Pearson correlation coefficient
+        p_value: P-value for correlation
+    """
+    # Compute predictions
+    predictions = np.dot(metrics_normalized, coefficients)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Scatter plot
+    ax.scatter(predictions, performance, alpha=0.6, s=50, edgecolors='k', linewidths=0.5)
+
+    # Add best fit line
+    z = np.polyfit(predictions, performance, 1)
+    p = np.poly1d(z)
+    pred_sorted = np.sort(predictions)
+    ax.plot(pred_sorted, p(pred_sorted), 'r-', alpha=0.7, linewidth=2, label=f'Best fit (y={z[0]:.3f}x+{z[1]:.3f})')
+
+    # Labels and title
+    ax.set_xlabel('Predicted Mergeability Score (Linear Combination)', fontsize=12)
+    ax.set_ylabel('Actual Merge Performance (Accuracy)', fontsize=12)
+    ax.set_title(f'{split_name.capitalize()} Set: r={corr:.4f}, p={p_value:.2e}', fontsize=14)
+    ax.legend(loc='best')
+    ax.grid(True, alpha=0.3)
+
+    # Save figure
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    print(f"Saved scatter plot to: {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description='Optimize metric coefficients for merge prediction')
     parser.add_argument('--metrics', type=str,
@@ -358,6 +405,13 @@ def main():
     # Create output directory if needed
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create figs directory within the metric_linear_optimization results folder
+    figs_dir = output_path.parent / 'figs'
+    figs_dir.mkdir(parents=True, exist_ok=True)
+
+    # Determine merge method from output path
+    merge_method = output_path.stem.split('_')[0]  # e.g., 'arithmetic' from 'arithmetic_pearson'
 
     # Load data
     print("Loading data...")
@@ -431,6 +485,19 @@ def main():
         print(f"Full dataset correlation (scipy): {full_corr:.4f} (p-value: {full_p_value:.2e})")
         print()
 
+        # Generate scatter plots
+        print("Generating scatter plots...")
+        plot_scatter(best_coefficients, metrics_train, performance_train,
+                    figs_dir / f'{merge_method}_train_scatter.png',
+                    'train', train_corr, train_p_value)
+        plot_scatter(best_coefficients, metrics_val, performance_val,
+                    figs_dir / f'{merge_method}_validation_scatter.png',
+                    'validation', val_corr, val_p_value)
+        plot_scatter(best_coefficients, metrics_normalized, performance_array,
+                    figs_dir / f'{merge_method}_full_scatter.png',
+                    'full', full_corr, full_p_value)
+        print()
+
     else:
         # No validation split - use all data for training
         print("No validation split - using all pairs for optimization...")
@@ -453,6 +520,13 @@ def main():
         val_p_value = None
         full_corr = train_corr
         full_p_value = train_p_value
+
+        # Generate scatter plot
+        print("Generating scatter plot...")
+        plot_scatter(best_coefficients, metrics_normalized, performance_array,
+                    figs_dir / f'{merge_method}_full_scatter.png',
+                    'full', full_corr, full_p_value)
+        print()
 
     # Print results
     print("=" * 60)
