@@ -437,15 +437,46 @@ def main():
 
     # Perform train/validation split if validation_split > 0
     if args.validation_split > 0.0:
-        print(f"Performing train/validation split (validation={args.validation_split:.1%}, seed={args.random_seed})...")
+        print(f"Performing task-level train/validation split (validation={args.validation_split:.1%}, seed={args.random_seed})...")
 
-        # Split the data
-        indices = np.arange(len(pair_names))
-        train_indices, val_indices = train_test_split(
-            indices,
-            test_size=args.validation_split,
-            random_state=args.random_seed
-        )
+        # Get list of unique tasks from the dataset
+        all_tasks = metrics_data['datasets']
+        n_tasks = len(all_tasks)
+
+        # Determine number of validation tasks based on validation_split
+        n_val_tasks = max(1, int(n_tasks * args.validation_split))
+        n_train_tasks = n_tasks - n_val_tasks
+
+        # Randomly select validation tasks
+        np.random.seed(args.random_seed)
+        val_task_indices = np.random.choice(n_tasks, n_val_tasks, replace=False)
+        val_tasks = set([all_tasks[i] for i in val_task_indices])
+        train_tasks = set([task for task in all_tasks if task not in val_tasks])
+
+        print(f"  Total tasks: {n_tasks}")
+        print(f"  Training tasks ({n_train_tasks}): {sorted(train_tasks)}")
+        print(f"  Validation tasks ({n_val_tasks}): {sorted(val_tasks)}")
+        print()
+
+        # Split pairs based on task membership
+        # Training: both tasks in train_tasks
+        # Validation: at least one task in val_tasks
+        train_indices = []
+        val_indices = []
+
+        for i, pair_name in enumerate(pair_names):
+            # Parse pair name (format: "Task1__Task2")
+            task1, task2 = pair_name.split('__')
+
+            # If both tasks are in training set, it's a training pair
+            if task1 in train_tasks and task2 in train_tasks:
+                train_indices.append(i)
+            # Otherwise, it's a validation pair (at least one task is in validation)
+            else:
+                val_indices.append(i)
+
+        train_indices = np.array(train_indices)
+        val_indices = np.array(val_indices)
 
         metrics_train = metrics_normalized[train_indices]
         performance_train = performance_array[train_indices]
@@ -455,8 +486,8 @@ def main():
         train_pair_names = [pair_names[i] for i in train_indices]
         val_pair_names = [pair_names[i] for i in val_indices]
 
-        print(f"  Training pairs: {len(train_pair_names)}")
-        print(f"  Validation pairs: {len(val_pair_names)}")
+        print(f"  Training pairs: {len(train_pair_names)} (pairs among {n_train_tasks} training tasks)")
+        print(f"  Validation pairs: {len(val_pair_names)} (pairs involving {n_val_tasks} validation tasks)")
         print()
 
         # Optimize on training set
