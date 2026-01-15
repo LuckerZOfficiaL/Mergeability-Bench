@@ -89,3 +89,21 @@ metric_linear_optimization:
   patience: 50  # Number of iterations without improvement before stopping
   target_metric: 'acc/test/avg'  # Performance metric to correlate with
   output_path: "${oc.env:PROJECT_ROOT}/results/metric_linear_optimization/"
+
+# Learnable mergeability configuration (MLP-based)
+learnable_mergeability:
+  merge_methods:  # Merge methods to predict
+    - weight_avg
+    - arithmetic
+    - tsv
+    - isotropic
+  hidden_dim: 16  # Hidden layer dimension for MLP
+  dropout: 0.3  # Dropout rate for regularization
+  learning_rate: 0.001  # Learning rate for Adam optimizer
+  epochs: 300  # Number of training epochs
+  batch_size: null  # Batch size (null for full batch)
+  validation_split: 0.2  # Fraction of tasks for validation (task-level split)
+  random_seed: 42  # Random seed for reproducibility
+  device: 'cuda'  # Device to use (cuda or cpu)
+  results_dir: "${oc.env:PROJECT_ROOT}/results/ViT-B-16"  # Directory containing merge method results
+  output_path: "${oc.env:PROJECT_ROOT}/results/learnable_mergeability/"
