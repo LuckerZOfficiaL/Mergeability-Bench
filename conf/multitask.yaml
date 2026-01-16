@@ -97,8 +97,9 @@ learnable_mergeability:
     - arithmetic
     - tsv
     - isotropic
-  hidden_dim: 16  # Hidden layer dimension for MLP
-  dropout: 0.3  # Dropout rate for regularization
+  hidden_dim: 8  # Hidden layer dimension for MLP (reduced from 16 for regularization)
+  dropout: 0.4  # Dropout rate for regularization (increased from 0.3)
+  weight_decay: 0.001  # L2 weight decay for Adam optimizer
   learning_rate: 0.001  # Learning rate for Adam optimizer
   epochs: 300  # Number of training epochs
   batch_size: null  # Batch size (null for full batch)

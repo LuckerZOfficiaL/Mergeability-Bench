@@ -303,7 +303,8 @@ def main(cfg: DictConfig):
 
     # Loss and optimizer
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=cfg_learn.learning_rate)
+    weight_decay = cfg_learn.get('weight_decay', 0.0)
+    optimizer = optim.Adam(model.parameters(), lr=cfg_learn.learning_rate, weight_decay=weight_decay)
 
     print(f"Training for {cfg_learn.epochs} epochs...")
     print(f"Learning rate: {cfg_learn.learning_rate}")
