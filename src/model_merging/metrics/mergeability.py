@@ -1192,6 +1192,978 @@ def activation_dot_product(
 
 
 # =============================================================================
+# Gradient-based Metrics
+# =============================================================================
+
+
+def reconstruct_classifier_from_task_dict(
+    pretrained_model,
+    task_dict: Dict[str, torch.Tensor],
+    num_classes: int,
+    coefficient: float = 1.0,
+    device: str = "cuda",
+):
+    """Reconstruct a full ImageClassifier from pretrained encoder + task vector.
+
+    Args:
+        pretrained_model: The pretrained encoder (ImageEncoder)
+        task_dict: Task vector containing both encoder and classification_head params
+        num_classes: Number of output classes for the classification head
+        coefficient: Scaling coefficient for task vector
+        device: Device to use
+
+    Returns:
+        ImageClassifier with reconstructed encoder and classification head
+    """
+    from model_merging.model.image_classifier import ImageClassifier
+    from model_merging.model.encoder import ClassificationHead
+    from model_merging.utils.utils import apply_dict_to_model
+
+    # Reconstruct encoder (without keeping on GPU during deepcopy to save memory)
+    encoder = reconstruct_model_from_task_dict(
+        pretrained_model, task_dict, coefficient=coefficient, device="cpu"
+    )
+    # Move to target device after reconstruction
+    encoder = encoder.to(device)
+
+    # Extract classification head parameters from task_dict
+    # The task dict has keys like "classification_head.weight" and "classification_head.bias"
+    head_weight_key = "classification_head.weight"
+    head_bias_key = "classification_head.bias"
+
+    # Get pretrained encoder state dict to find the original head params
+    pretrained_state = pretrained_model.state_dict()
+
+    # Compute finetuned head parameters (pretrained + task_vector * coefficient)
+    if head_weight_key in task_dict:
+        # Task dict has classification head, reconstruct it
+        if head_weight_key in pretrained_state:
+            head_weight = pretrained_state[head_weight_key] + coefficient * task_dict[head_weight_key]
+        else:
+            # Pretrained doesn't have head, use task dict directly
+            head_weight = coefficient * task_dict[head_weight_key]
+
+        if head_bias_key in task_dict:
+            if head_bias_key in pretrained_state:
+                head_bias = pretrained_state[head_bias_key] + coefficient * task_dict[head_bias_key]
+            else:
+                head_bias = coefficient * task_dict[head_bias_key]
+        else:
+            head_bias = None
+
+        # Create classification head
+        classification_head = ClassificationHead(
+            normalize=True,
+            weights=head_weight.to(device),
+            biases=head_bias.to(device) if head_bias is not None else None,
+        )
+    else:
+        # No classification head in task dict, create a random one
+        # (This shouldn't normally happen for gradient metrics)
+        embedding_dim = 512  # Default for CLIP ViT-B/32
+        classification_head = ClassificationHead(
+            normalize=True,
+            input_size=embedding_dim,
+            num_classes=num_classes,
+        )
+
+    # Create ImageClassifier
+    classifier = ImageClassifier(
+        encoder=encoder,
+        classifier=classification_head,
+    )
+    classifier = classifier.to(device)
+
+    return classifier
+
+
+def reconstruct_dual_head_classifier(
+    pretrained_model,
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    num_classes_1: int,
+    num_classes_2: int,
+    task_id: int,  # Which task this model represents (0 or 1)
+    coefficient: float = 1.0,
+    device: str = "cuda",
+):
+    """Reconstruct a classifier with two heads, but only one encoder is task-specific.
+
+    For gradient comparison, we want both models to process the same inputs.
+    Each model has its own encoder (task-specific) but both heads present
+    so loss can be computed on samples from both tasks.
+
+    Args:
+        pretrained_model: The pretrained encoder (ImageEncoder)
+        task_dict_1: Task vector for task 1
+        task_dict_2: Task vector for task 2
+        num_classes_1: Number of classes for task 1
+        num_classes_2: Number of classes for task 2
+        task_id: Which task this model represents (0 = task 1, 1 = task 2)
+        coefficient: Scaling coefficient for task vector
+        device: Device to use
+
+    Returns:
+        A model with the task-specific encoder and both classification heads
+    """
+    from model_merging.model.encoder import ClassificationHead
+
+    # Reconstruct the task-specific encoder
+    if task_id == 0:
+        encoder = reconstruct_model_from_task_dict(
+            pretrained_model, task_dict_1, coefficient=coefficient, device=device
+        )
+        own_task_dict = task_dict_1
+        other_task_dict = task_dict_2
+    else:
+        encoder = reconstruct_model_from_task_dict(
+            pretrained_model, task_dict_2, coefficient=coefficient, device=device
+        )
+        own_task_dict = task_dict_2
+        other_task_dict = task_dict_1
+
+    # Helper function to extract classification head
+    def extract_head(task_dict, num_classes, pretrained_state):
+        head_weight_key = "classification_head.weight"
+        head_bias_key = "classification_head.bias"
+
+        if head_weight_key in task_dict:
+            if head_weight_key in pretrained_state:
+                head_weight = pretrained_state[head_weight_key] + coefficient * task_dict[head_weight_key]
+            else:
+                head_weight = coefficient * task_dict[head_weight_key]
+
+            if head_bias_key in task_dict:
+                if head_bias_key in pretrained_state:
+                    head_bias = pretrained_state[head_bias_key] + coefficient * task_dict[head_bias_key]
+                else:
+                    head_bias = coefficient * task_dict[head_bias_key]
+            else:
+                head_bias = None
+
+            return ClassificationHead(
+                normalize=True,
+                weights=head_weight.to(device),
+                biases=head_bias.to(device) if head_bias is not None else None,
+            )
+        else:
+            embedding_dim = 512
+            return ClassificationHead(
+                normalize=True,
+                input_size=embedding_dim,
+                num_classes=num_classes,
+            )
+
+    pretrained_state = pretrained_model.state_dict()
+
+    # Create both heads
+    head_1 = extract_head(task_dict_1, num_classes_1, pretrained_state)
+    head_2 = extract_head(task_dict_2, num_classes_2, pretrained_state)
+
+    # Create dual-head model
+    class DualHeadModel(torch.nn.Module):
+        def __init__(self, encoder, head_1, head_2, task_id):
+            super().__init__()
+            self.encoder = encoder
+            self.classification_head_1 = head_1
+            self.classification_head_2 = head_2
+            self.task_id = task_id
+
+        def forward(self, images, task_ids):
+            """Compute logits using appropriate head based on task_ids."""
+            features = self.encoder(images)
+            logits_1 = self.classification_head_1(features)
+            logits_2 = self.classification_head_2(features)
+
+            # For each sample, use the logits from its corresponding head
+            batch_size = images.size(0)
+            max_classes = max(logits_1.size(1), logits_2.size(1))
+            output_logits = torch.zeros(batch_size, max_classes, device=images.device)
+
+            for i in range(batch_size):
+                if task_ids[i] == 0:
+                    output_logits[i, :logits_1.size(1)] = logits_1[i]
+                else:
+                    output_logits[i, :logits_2.size(1)] = logits_2[i]
+
+            return output_logits
+
+    model = DualHeadModel(encoder, head_1, head_2, task_id)
+    model = model.to(device)
+
+    return model
+
+
+def build_unified_calibration_loader(
+    dataset_config_1: Dict,
+    dataset_config_2: Dict,
+    pretrained_encoder,
+    n_samples: int = 10,
+    batch_size: int = 8,
+    device: str = "cuda",
+    random_seed: int = 42,
+) -> Tuple[DataLoader, int, int]:
+    """Build a unified calibration data loader combining samples from two datasets.
+
+    This creates a single loader with samples from both tasks, allowing both models
+    to compute gradients on the exact same calibration set for fair comparison.
+
+    Args:
+        dataset_config_1: First dataset config dictionary (from Hydra)
+        dataset_config_2: Second dataset config dictionary (from Hydra)
+        pretrained_encoder: The pretrained encoder model to get preprocessor
+        n_samples: Number of samples to take from each dataset's validation set
+        batch_size: Batch size for the calibration loader
+        device: Device to use
+        random_seed: Random seed for reproducible sampling
+
+    Returns:
+        Tuple of (unified_calibration_loader, num_classes_1, num_classes_2)
+        The loader returns (images, labels, task_ids) where task_ids indicate which task each sample belongs to
+    """
+    from model_merging.data.dataset import load_dataset
+    from hydra.utils import instantiate
+    import random
+
+    preprocess_fn = pretrained_encoder.val_preprocess
+    random.seed(random_seed)
+
+    all_samples = []
+    num_classes_list = []
+
+    for task_id, dataset_cfg in enumerate([dataset_config_1, dataset_config_2]):
+        # Instantiate the HF dataset using Hydra
+        hf_dataset = instantiate(dataset_cfg.hf_dataset)
+
+        # Load the dataset
+        dataset = load_dataset(
+            name=dataset_cfg.name,
+            hf_dataset=hf_dataset,
+            preprocess_fn=preprocess_fn,
+            ft_epochs=dataset_cfg.get("ft_epochs", 10),
+            split_map=dataset_cfg.get("split_map", None),
+            batch_size=batch_size,
+            label_map=dataset_cfg.get("label_map", None),
+            classnames_override=dataset_cfg.get("classnames_override", None),
+        )
+
+        # Get number of classes from dataset
+        num_classes = len(dataset.classnames)
+        num_classes_list.append(num_classes)
+
+        # Sample n_samples from validation/test set randomly
+        test_dataset = dataset.test_dataset
+        n_available = len(test_dataset)
+        n_to_sample = min(n_samples, n_available)
+
+        # Random sampling with fixed seed for reproducibility
+        indices = random.sample(range(n_available), n_to_sample)
+        indices.sort()  # Sort for consistent ordering
+
+        # Add samples with task_id marker
+        for idx in indices:
+            image, label = test_dataset[idx]
+            all_samples.append((image, label, task_id))
+
+    # Create a unified dataset wrapper
+    class UnifiedCalibrationDataset(torch.utils.data.Dataset):
+        def __init__(self, samples):
+            self.samples = samples
+
+        def __len__(self):
+            return len(self.samples)
+
+        def __getitem__(self, idx):
+            return self.samples[idx]
+
+    unified_dataset = UnifiedCalibrationDataset(all_samples)
+    unified_loader = DataLoader(
+        unified_dataset,
+        batch_size=batch_size,
+        shuffle=False,  # Keep deterministic order
+        num_workers=0,  # Important for gradient computation
+        pin_memory=True,
+    )
+
+    return unified_loader, num_classes_list[0], num_classes_list[1]
+
+
+def build_pairwise_calibration_loader(
+    dataset_config_1: Dict,
+    dataset_config_2: Dict,
+    pretrained_encoder,
+    n_samples: int = 10,
+    batch_size: int = 8,
+    device: str = "cuda",
+    random_seed: int = 42,
+) -> Tuple[DataLoader, DataLoader, int, int]:
+    """Build separate calibration data loaders for two datasets.
+
+    Args:
+        dataset_config_1: First dataset config dictionary (from Hydra)
+        dataset_config_2: Second dataset config dictionary (from Hydra)
+        pretrained_encoder: The pretrained encoder model to get preprocessor
+        n_samples: Number of samples to take from each dataset's validation set
+        batch_size: Batch size for the calibration loaders
+        device: Device to use
+        random_seed: Random seed for reproducible sampling
+
+    Returns:
+        Tuple of (calibration_loader_1, calibration_loader_2, num_classes_1, num_classes_2)
+    """
+    from model_merging.data.dataset import load_dataset
+    from hydra.utils import instantiate
+    import random
+
+    preprocess_fn = pretrained_encoder.val_preprocess
+    random.seed(random_seed)
+
+    loaders = []
+    num_classes_list = []
+    for dataset_cfg in [dataset_config_1, dataset_config_2]:
+        # Instantiate the HF dataset using Hydra
+        hf_dataset = instantiate(dataset_cfg.hf_dataset)
+
+        # Load the dataset
+        dataset = load_dataset(
+            name=dataset_cfg.name,
+            hf_dataset=hf_dataset,
+            preprocess_fn=preprocess_fn,
+            ft_epochs=dataset_cfg.get("ft_epochs", 10),
+            split_map=dataset_cfg.get("split_map", None),
+            batch_size=batch_size,
+            label_map=dataset_cfg.get("label_map", None),
+            classnames_override=dataset_cfg.get("classnames_override", None),
+        )
+
+        # Get number of classes from dataset
+        num_classes = len(dataset.classnames)
+        num_classes_list.append(num_classes)
+
+        # Sample n_samples from validation/test set randomly
+        test_dataset = dataset.test_dataset
+        n_available = len(test_dataset)
+        n_to_sample = min(n_samples, n_available)
+
+        # Random sampling with fixed seed for reproducibility
+        indices = random.sample(range(n_available), n_to_sample)
+        indices.sort()  # Sort for consistent ordering
+
+        samples = [test_dataset[idx] for idx in indices]
+
+        # Create a simple Dataset wrapper
+        class CalibrationDataset(torch.utils.data.Dataset):
+            def __init__(self, samples):
+                self.samples = samples
+
+            def __len__(self):
+                return len(self.samples)
+
+            def __getitem__(self, idx):
+                return self.samples[idx]
+
+        calibration_dataset = CalibrationDataset(samples)
+        calibration_loader = DataLoader(
+            calibration_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=0,  # Important for gradient computation
+            pin_memory=True,
+        )
+        loaders.append(calibration_loader)
+
+    return loaders[0], loaders[1], num_classes_list[0], num_classes_list[1]
+
+
+def extract_encoder_gradients_unified(
+    model,
+    unified_calibration_loader: DataLoader,
+    device: str = "cuda",
+) -> torch.Tensor:
+    """Extract encoder gradients from a dual-head model on unified calibration data.
+
+    Both models process the same calibration samples, computing gradients on all samples.
+
+    Args:
+        model: The dual-head model with task-specific encoder
+        unified_calibration_loader: DataLoader with (images, labels, task_ids)
+        device: Device to use
+
+    Returns:
+        Flattened tensor containing averaged encoder gradients
+    """
+    model.to(device)
+    model.train()
+
+    # Accumulate gradients across all batches
+    encoder_grad_sum = None
+    n_samples = 0
+
+    for batch in unified_calibration_loader:
+        images, labels, task_ids = batch
+        images = images.to(device)
+        labels = labels.to(device)
+        task_ids = task_ids.to(device)
+
+        # Zero gradients
+        model.zero_grad()
+
+        # Forward pass
+        logits = model(images, task_ids)
+
+        # Compute loss
+        loss = F.cross_entropy(logits, labels)
+
+        # Backward pass
+        loss.backward()
+
+        # Accumulate encoder gradients (exclude classification heads)
+        if encoder_grad_sum is None:
+            encoder_grad_sum = []
+            for name, param in model.named_parameters():
+                # Include encoder parameters only
+                if param.grad is not None and "classification_head" not in name:
+                    encoder_grad_sum.append(param.grad.detach().clone())
+        else:
+            idx = 0
+            for name, param in model.named_parameters():
+                if param.grad is not None and "classification_head" not in name:
+                    encoder_grad_sum[idx] += param.grad.detach().clone()
+                    idx += 1
+
+        n_samples += images.size(0)
+
+    if encoder_grad_sum is None or len(encoder_grad_sum) == 0:
+        raise ValueError("No encoder gradients found. Check model structure.")
+
+    # Flatten and average gradients
+    flat_grads = torch.cat([g.flatten() for g in encoder_grad_sum])
+    flat_grads = flat_grads / n_samples
+
+    return flat_grads
+
+
+def extract_encoder_gradients(
+    model,
+    calibration_loader: DataLoader,
+    device: str = "cuda",
+) -> torch.Tensor:
+    """Extract encoder gradients from a model on calibration data.
+
+    Computes the average gradient of the encoder parameters w.r.t. the
+    cross-entropy loss on the calibration samples.
+
+    Args:
+        model: The model (ImageClassifier with encoder and classification_head attributes)
+        calibration_loader: DataLoader with calibration samples
+        device: Device to use
+
+    Returns:
+        Flattened tensor containing averaged encoder gradients
+    """
+    model.to(device)
+    model.train()  # Enable gradient computation
+
+    # Accumulate gradients across all batches
+    encoder_grad_sum = None
+    n_samples = 0
+
+    for batch in calibration_loader:
+        images, labels = batch
+        images = images.to(device)
+        labels = labels.to(device)
+
+        # Zero gradients
+        model.zero_grad()
+
+        # Forward pass
+        logits = model(images)
+
+        # Compute loss
+        loss = F.cross_entropy(logits, labels)
+
+        # Backward pass
+        loss.backward()
+
+        # Accumulate encoder gradients (exclude classification head)
+        if encoder_grad_sum is None:
+            encoder_grad_sum = []
+            for name, param in model.named_parameters():
+                # Include all parameters EXCEPT classification_head
+                if param.grad is not None and "classification_head" not in name:
+                    encoder_grad_sum.append(param.grad.detach().clone())
+        else:
+            idx = 0
+            for name, param in model.named_parameters():
+                if param.grad is not None and "classification_head" not in name:
+                    encoder_grad_sum[idx] += param.grad.detach().clone()
+                    idx += 1
+
+        n_samples += images.size(0)
+
+    if encoder_grad_sum is None or len(encoder_grad_sum) == 0:
+        raise ValueError("No encoder gradients found. Check model structure.")
+
+    # Flatten and average gradients
+    flat_grads = torch.cat([g.flatten() for g in encoder_grad_sum])
+    flat_grads = flat_grads / n_samples
+
+    return flat_grads
+
+
+def extract_input_gradients(
+    model,
+    calibration_loader: DataLoader,
+    device: str = "cuda",
+) -> torch.Tensor:
+    """Extract input gradients from a model on calibration data.
+
+    Computes the average gradient of the loss w.r.t. the input images
+    on the calibration samples.
+
+    Args:
+        model: The model (should have encoder and classification_head attributes)
+        calibration_loader: DataLoader with calibration samples
+        device: Device to use
+
+    Returns:
+        Flattened tensor containing averaged input gradients
+    """
+    model.to(device)
+    model.train()  # Enable gradient computation
+
+    all_input_grads = []
+
+    for batch in calibration_loader:
+        images, labels = batch
+        images = images.to(device)
+        labels = labels.to(device)
+
+        # Enable gradient computation for inputs
+        images.requires_grad_(True)
+
+        # Zero gradients
+        model.zero_grad()
+
+        # Forward pass
+        logits = model(images)
+
+        # Compute loss
+        loss = F.cross_entropy(logits, labels)
+
+        # Backward pass to get input gradients
+        loss.backward()
+
+        # Extract input gradients
+        if images.grad is not None:
+            all_input_grads.append(images.grad.detach().clone().flatten())
+
+    if not all_input_grads:
+        raise ValueError("No input gradients found.")
+
+    # Concatenate all input gradients and compute average
+    flat_input_grads = torch.cat(all_input_grads)
+
+    return flat_input_grads
+
+
+def encoder_gradient_cosine_similarity(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    pretrained_model=None,
+    dataset_config_1: Optional[Dict] = None,
+    dataset_config_2: Optional[Dict] = None,
+    n_calibration_samples: int = 10,
+    calibration_batch_size: int = 8,
+    calibration_random_seed: int = 42,
+    device: str = "cuda",
+) -> float:
+    """Compute cosine similarity between encoder gradients of two models.
+
+    This measures how similarly the two models' encoders respond to
+    gradient updates on their respective tasks.
+
+    Args:
+        task_dict_1: First task vector
+        task_dict_2: Second task vector
+        pretrained_model: Pretrained model (required)
+        dataset_config_1: Config for first dataset (required)
+        dataset_config_2: Config for second dataset (required)
+        n_calibration_samples: Number of samples per dataset
+        calibration_batch_size: Batch size for gradient computation
+        calibration_random_seed: Random seed for sampling
+        device: Device to use
+
+    Returns:
+        Cosine similarity between encoder gradients in [-1, 1]
+    """
+    if pretrained_model is None or dataset_config_1 is None or dataset_config_2 is None:
+        raise ValueError(
+            "Encoder gradient metrics require pretrained_model, dataset_config_1, and dataset_config_2"
+        )
+
+    # Build pairwise calibration loaders
+    cal_loader_1, cal_loader_2, num_classes_1, num_classes_2 = build_pairwise_calibration_loader(
+        dataset_config_1,
+        dataset_config_2,
+        pretrained_model,
+        n_samples=n_calibration_samples,
+        batch_size=calibration_batch_size,
+        device=device,
+        random_seed=calibration_random_seed,
+    )
+
+    # Reconstruct full classifiers (encoder + classification head)
+    model_1 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_1, num_classes_1, device=device
+    )
+    model_2 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_2, num_classes_2, device=device
+    )
+
+    # Extract encoder gradients
+    grads_1 = extract_encoder_gradients(model_1, cal_loader_1, device)
+    grads_2 = extract_encoder_gradients(model_2, cal_loader_2, device)
+
+    # Compute cosine similarity
+    similarity = F.cosine_similarity(grads_1.unsqueeze(0), grads_2.unsqueeze(0)).item()
+
+    # Clean up
+    del model_1, model_2, grads_1, grads_2, cal_loader_1, cal_loader_2
+    torch.cuda.empty_cache()
+
+    return similarity
+
+
+def encoder_gradient_l2_distance(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    pretrained_model=None,
+    dataset_config_1: Optional[Dict] = None,
+    dataset_config_2: Optional[Dict] = None,
+    n_calibration_samples: int = 10,
+    calibration_batch_size: int = 8,
+    calibration_random_seed: int = 42,
+    device: str = "cuda",
+) -> float:
+    """Compute L2 distance between encoder gradients of two models.
+
+    Args:
+        task_dict_1: First task vector
+        task_dict_2: Second task vector
+        pretrained_model: Pretrained model (required)
+        dataset_config_1: Config for first dataset (required)
+        dataset_config_2: Config for second dataset (required)
+        n_calibration_samples: Number of samples per dataset
+        calibration_batch_size: Batch size for gradient computation
+        calibration_random_seed: Random seed for sampling
+        device: Device to use
+
+    Returns:
+        L2 distance between encoder gradients
+    """
+    if pretrained_model is None or dataset_config_1 is None or dataset_config_2 is None:
+        raise ValueError(
+            "Encoder gradient metrics require pretrained_model, dataset_config_1, and dataset_config_2"
+        )
+
+    # Build pairwise calibration loaders
+    cal_loader_1, cal_loader_2, num_classes_1, num_classes_2 = build_pairwise_calibration_loader(
+        dataset_config_1,
+        dataset_config_2,
+        pretrained_model,
+        n_samples=n_calibration_samples,
+        batch_size=calibration_batch_size,
+        device=device,
+        random_seed=calibration_random_seed,
+    )
+
+    # Reconstruct models
+    model_1 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_1, num_classes_1, device=device
+    )
+    model_2 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_2, num_classes_2, device=device
+    )
+
+    # Extract encoder gradients
+    grads_1 = extract_encoder_gradients(model_1, cal_loader_1, device)
+    grads_2 = extract_encoder_gradients(model_2, cal_loader_2, device)
+
+    # Compute L2 distance
+    distance = torch.norm(grads_1 - grads_2, p=2).item()
+
+    # Clean up
+    del model_1, model_2, grads_1, grads_2, cal_loader_1, cal_loader_2
+    torch.cuda.empty_cache()
+
+    return distance
+
+
+def encoder_gradient_dot_product(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    pretrained_model=None,
+    dataset_config_1: Optional[Dict] = None,
+    dataset_config_2: Optional[Dict] = None,
+    n_calibration_samples: int = 10,
+    calibration_batch_size: int = 8,
+    calibration_random_seed: int = 42,
+    device: str = "cuda",
+) -> float:
+    """Compute dot product between encoder gradients of two models.
+
+    Args:
+        task_dict_1: First task vector
+        task_dict_2: Second task vector
+        pretrained_model: Pretrained model (required)
+        dataset_config_1: Config for first dataset (required)
+        dataset_config_2: Config for second dataset (required)
+        n_calibration_samples: Number of samples per dataset
+        calibration_batch_size: Batch size for gradient computation
+        calibration_random_seed: Random seed for sampling
+        device: Device to use
+
+    Returns:
+        Dot product between encoder gradients
+    """
+    if pretrained_model is None or dataset_config_1 is None or dataset_config_2 is None:
+        raise ValueError(
+            "Encoder gradient metrics require pretrained_model, dataset_config_1, and dataset_config_2"
+        )
+
+    # Build pairwise calibration loaders
+    cal_loader_1, cal_loader_2, num_classes_1, num_classes_2 = build_pairwise_calibration_loader(
+        dataset_config_1,
+        dataset_config_2,
+        pretrained_model,
+        n_samples=n_calibration_samples,
+        batch_size=calibration_batch_size,
+        device=device,
+        random_seed=calibration_random_seed,
+    )
+
+    # Reconstruct models
+    model_1 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_1, num_classes_1, device=device
+    )
+    model_2 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_2, num_classes_2, device=device
+    )
+
+    # Extract encoder gradients
+    grads_1 = extract_encoder_gradients(model_1, cal_loader_1, device)
+    grads_2 = extract_encoder_gradients(model_2, cal_loader_2, device)
+
+    # Compute dot product
+    dot_prod = torch.dot(grads_1, grads_2).item()
+
+    # Clean up
+    del model_1, model_2, grads_1, grads_2, cal_loader_1, cal_loader_2
+    torch.cuda.empty_cache()
+
+    return dot_prod
+
+
+def input_gradient_cosine_similarity(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    pretrained_model=None,
+    dataset_config_1: Optional[Dict] = None,
+    dataset_config_2: Optional[Dict] = None,
+    n_calibration_samples: int = 10,
+    calibration_batch_size: int = 8,
+    calibration_random_seed: int = 42,
+    device: str = "cuda",
+) -> float:
+    """Compute cosine similarity between input gradients of two models.
+
+    This measures how similarly the two models respond to input perturbations
+    on their respective tasks.
+
+    Args:
+        task_dict_1: First task vector
+        task_dict_2: Second task vector
+        pretrained_model: Pretrained model (required)
+        dataset_config_1: Config for first dataset (required)
+        dataset_config_2: Config for second dataset (required)
+        n_calibration_samples: Number of samples per dataset
+        calibration_batch_size: Batch size for gradient computation
+        calibration_random_seed: Random seed for sampling
+        device: Device to use
+
+    Returns:
+        Cosine similarity between input gradients in [-1, 1]
+    """
+    if pretrained_model is None or dataset_config_1 is None or dataset_config_2 is None:
+        raise ValueError(
+            "Input gradient metrics require pretrained_model, dataset_config_1, and dataset_config_2"
+        )
+
+    # Build pairwise calibration loaders
+    cal_loader_1, cal_loader_2, num_classes_1, num_classes_2 = build_pairwise_calibration_loader(
+        dataset_config_1,
+        dataset_config_2,
+        pretrained_model,
+        n_samples=n_calibration_samples,
+        batch_size=calibration_batch_size,
+        device=device,
+        random_seed=calibration_random_seed,
+    )
+
+    # Reconstruct models
+    model_1 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_1, num_classes_1, device=device
+    )
+    model_2 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_2, num_classes_2, device=device
+    )
+
+    # Extract input gradients
+    grads_1 = extract_input_gradients(model_1, cal_loader_1, device)
+    grads_2 = extract_input_gradients(model_2, cal_loader_2, device)
+
+    # Compute cosine similarity
+    similarity = F.cosine_similarity(grads_1.unsqueeze(0), grads_2.unsqueeze(0)).item()
+
+    # Clean up
+    del model_1, model_2, grads_1, grads_2, cal_loader_1, cal_loader_2
+    torch.cuda.empty_cache()
+
+    return similarity
+
+
+def input_gradient_l2_distance(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    pretrained_model=None,
+    dataset_config_1: Optional[Dict] = None,
+    dataset_config_2: Optional[Dict] = None,
+    n_calibration_samples: int = 10,
+    calibration_batch_size: int = 8,
+    calibration_random_seed: int = 42,
+    device: str = "cuda",
+) -> float:
+    """Compute L2 distance between input gradients of two models.
+
+    Args:
+        task_dict_1: First task vector
+        task_dict_2: Second task vector
+        pretrained_model: Pretrained model (required)
+        dataset_config_1: Config for first dataset (required)
+        dataset_config_2: Config for second dataset (required)
+        n_calibration_samples: Number of samples per dataset
+        calibration_batch_size: Batch size for gradient computation
+        calibration_random_seed: Random seed for sampling
+        device: Device to use
+
+    Returns:
+        L2 distance between input gradients
+    """
+    if pretrained_model is None or dataset_config_1 is None or dataset_config_2 is None:
+        raise ValueError(
+            "Input gradient metrics require pretrained_model, dataset_config_1, and dataset_config_2"
+        )
+
+    # Build pairwise calibration loaders
+    cal_loader_1, cal_loader_2, num_classes_1, num_classes_2 = build_pairwise_calibration_loader(
+        dataset_config_1,
+        dataset_config_2,
+        pretrained_model,
+        n_samples=n_calibration_samples,
+        batch_size=calibration_batch_size,
+        device=device,
+        random_seed=calibration_random_seed,
+    )
+
+    # Reconstruct models
+    model_1 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_1, num_classes_1, device=device
+    )
+    model_2 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_2, num_classes_2, device=device
+    )
+
+    # Extract input gradients
+    grads_1 = extract_input_gradients(model_1, cal_loader_1, device)
+    grads_2 = extract_input_gradients(model_2, cal_loader_2, device)
+
+    # Compute L2 distance
+    distance = torch.norm(grads_1 - grads_2, p=2).item()
+
+    # Clean up
+    del model_1, model_2, grads_1, grads_2, cal_loader_1, cal_loader_2
+    torch.cuda.empty_cache()
+
+    return distance
+
+
+def input_gradient_dot_product(
+    task_dict_1: Dict[str, torch.Tensor],
+    task_dict_2: Dict[str, torch.Tensor],
+    pretrained_model=None,
+    dataset_config_1: Optional[Dict] = None,
+    dataset_config_2: Optional[Dict] = None,
+    n_calibration_samples: int = 10,
+    calibration_batch_size: int = 8,
+    calibration_random_seed: int = 42,
+    device: str = "cuda",
+) -> float:
+    """Compute dot product between input gradients of two models.
+
+    Args:
+        task_dict_1: First task vector
+        task_dict_2: Second task vector
+        pretrained_model: Pretrained model (required)
+        dataset_config_1: Config for first dataset (required)
+        dataset_config_2: Config for second dataset (required)
+        n_calibration_samples: Number of samples per dataset
+        calibration_batch_size: Batch size for gradient computation
+        calibration_random_seed: Random seed for sampling
+        device: Device to use
+
+    Returns:
+        Dot product between input gradients
+    """
+    if pretrained_model is None or dataset_config_1 is None or dataset_config_2 is None:
+        raise ValueError(
+            "Input gradient metrics require pretrained_model, dataset_config_1, and dataset_config_2"
+        )
+
+    # Build pairwise calibration loaders
+    cal_loader_1, cal_loader_2, num_classes_1, num_classes_2 = build_pairwise_calibration_loader(
+        dataset_config_1,
+        dataset_config_2,
+        pretrained_model,
+        n_samples=n_calibration_samples,
+        batch_size=calibration_batch_size,
+        device=device,
+        random_seed=calibration_random_seed,
+    )
+
+    # Reconstruct models
+    model_1 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_1, num_classes_1, device=device
+    )
+    model_2 = reconstruct_classifier_from_task_dict(
+        pretrained_model, task_dict_2, num_classes_2, device=device
+    )
+
+    # Extract input gradients
+    grads_1 = extract_input_gradients(model_1, cal_loader_1, device)
+    grads_2 = extract_input_gradients(model_2, cal_loader_2, device)
+
+    # Compute dot product
+    dot_prod = torch.dot(grads_1, grads_2).item()
+
+    # Clean up
+    del model_1, model_2, grads_1, grads_2, cal_loader_1, cal_loader_2
+    torch.cuda.empty_cache()
+
+    return dot_prod
+
+
+# =============================================================================
 # Metric Registry
 # =============================================================================
 
@@ -1267,6 +2239,14 @@ METRIC_REGISTRY: Dict[str, Callable] = {
     "activation_cosine_similarity": activation_cosine_similarity,
     "activation_magnitude_ratio": activation_magnitude_ratio,
     "activation_dot_product": activation_dot_product,
+    # Gradient-based metrics (encoder gradients)
+    "encoder_gradient_cosine_similarity": encoder_gradient_cosine_similarity,
+    "encoder_gradient_l2_distance": encoder_gradient_l2_distance,
+    "encoder_gradient_dot_product": encoder_gradient_dot_product,
+    # Gradient-based metrics (input gradients)
+    "input_gradient_cosine_similarity": input_gradient_cosine_similarity,
+    "input_gradient_l2_distance": input_gradient_l2_distance,
+    "input_gradient_dot_product": input_gradient_dot_product,
 }
 
 # Registry for metrics that return tuples (metric_name -> list of output names)

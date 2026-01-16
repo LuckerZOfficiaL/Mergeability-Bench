@@ -377,7 +377,7 @@ def plot_scatter(coefficients, metrics_normalized, performance,
 def main():
     parser = argparse.ArgumentParser(description='Optimize metric coefficients for merge prediction')
     parser.add_argument('--metrics', type=str,
-                       default='/home/ubuntu/thesis/MM/model-merging/results/mergeability/ViT-B-16/pairwise_metrics_N20_merged.json',
+                       default='/home/ubuntu/thesis/MM/model-merging/results/mergeability/ViT-B-16/pairwise_metrics_N20.json',
                        help='Path to merged metrics file')
     parser.add_argument('--performance', type=str,
                        default='/home/ubuntu/thesis/MM/model-merging/results/ViT-B-16/arithmetic/all_pairwise_summary_N20.json',

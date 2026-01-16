@@ -129,6 +129,17 @@ def run(cfg: DictConfig) -> Dict:
     ]
     needs_activation_data = any(m in metrics_to_compute for m in activation_metrics)
 
+    # Check if any gradient-based metrics are requested
+    gradient_metrics = [
+        "encoder_gradient_cosine_similarity",
+        "encoder_gradient_l2_distance",
+        "encoder_gradient_dot_product",
+        "input_gradient_cosine_similarity",
+        "input_gradient_l2_distance",
+        "input_gradient_dot_product",
+    ]
+    needs_gradient_data = any(m in metrics_to_compute for m in gradient_metrics)
+
     # Build calibration loader if needed
     calibration_loader = None
     layer_name = None
@@ -172,8 +183,23 @@ def run(cfg: DictConfig) -> Dict:
 
         pylogger.info(f"  Calibration loader built with {len(calibration_loader.dataset)} total samples")
 
-    # Clean up pretrained state dict but keep pretrained_encoder if needed for activation metrics
-    if not needs_activation_data:
+    # Load dataset configs if needed for gradient metrics
+    dataset_configs_dict = {}
+    if needs_gradient_data:
+        pylogger.info("Loading dataset configs for gradient metrics...")
+        from omegaconf import OmegaConf
+        config_dir = PROJECT_ROOT / "conf"
+
+        for dataset_name in dataset_names:
+            dataset_config_path = config_dir / "dataset" / f"{dataset_name}.yaml"
+            if dataset_config_path.exists():
+                dataset_cfg = OmegaConf.load(dataset_config_path)
+                dataset_configs_dict[dataset_name] = dataset_cfg
+            else:
+                pylogger.warning(f"Dataset config not found: {dataset_config_path}")
+
+    # Clean up pretrained state dict but keep pretrained_encoder if needed for activation/gradient metrics
+    if not needs_activation_data and not needs_gradient_data:
         del pretrained_encoder, pretrained_state_dict
         torch.cuda.empty_cache()
     else:
@@ -241,16 +267,28 @@ def run(cfg: DictConfig) -> Dict:
                             "layer_name": layer_name,
                             "device": cfg.device,
                         }
+                    elif metric_name in gradient_metrics:
+                        # Gradient metrics need dataset configs for pairwise calibration
+                        kwargs = {
+                            "pretrained_model": pretrained_encoder,
+                            "dataset_config_1": dataset_configs_dict.get(name_i),
+                            "dataset_config_2": dataset_configs_dict.get(name_j),
+                            "n_calibration_samples": cfg.mergeability.get("n_calibration_samples", 10),
+                            "calibration_batch_size": cfg.mergeability.get("gradient_batch_size", 8),
+                            "calibration_random_seed": cfg.mergeability.get("calibration_random_seed", 42),
+                            "device": cfg.device,
+                        }
 
                     # Check if this is a tuple-returning metric
                     is_tuple_metric = metric_name in TUPLE_METRICS
 
                     if layer_wise:
-                        # Note: Layer-wise computation for activation metrics is not supported
+                        # Note: Layer-wise computation for activation/gradient metrics is not supported
                         # because it would require reconstructing models for each layer
-                        if metric_name in activation_metrics:
+                        if metric_name in activation_metrics or metric_name in gradient_metrics:
+                            metric_type = "activation" if metric_name in activation_metrics else "gradient"
                             pylogger.warning(
-                                f"Layer-wise mode not supported for activation metric {metric_name}, "
+                                f"Layer-wise mode not supported for {metric_type} metric {metric_name}, "
                                 "computing aggregate value instead"
                             )
                             metric_value = metric_fn(
@@ -337,9 +375,11 @@ def run(cfg: DictConfig) -> Dict:
                         results["metrics"][metric_name]["matrix"][i][j] = None
                         results["metrics"][metric_name]["pairs"][pair_key] = None
 
-    # Clean up activation resources if they were used
+    # Clean up activation/gradient resources if they were used
     if needs_activation_data:
-        del pretrained_encoder, calibration_loader
+        del calibration_loader
+    if needs_activation_data or needs_gradient_data:
+        del pretrained_encoder
         torch.cuda.empty_cache()
 
     # Save results

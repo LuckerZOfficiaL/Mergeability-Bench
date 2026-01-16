@@ -200,7 +200,7 @@ def main(cfg: DictConfig):
     figs_dir.mkdir(parents=True, exist_ok=True)
 
     # Build metrics path
-    metrics_path = Path(cfg.mergeability.output_path) / f"pairwise_metrics_{cfg.mergeability.benchmark_name}_merged.json"
+    metrics_path = Path(cfg.mergeability.output_path) / f"pairwise_metrics_{cfg.mergeability.benchmark_name}.json"
 
     print("="*70)
     print("Learnable Mergeability Prediction with MLP")
