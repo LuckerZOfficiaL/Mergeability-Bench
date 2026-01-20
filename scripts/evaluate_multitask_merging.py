@@ -109,13 +109,33 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
     zeroshot_encoder: ImageEncoder = load_model_from_hf(
         model_name=cfg.nn.encoder.model_name
     )
-    
-    finetuned_models = {
-        dataset: load_model_from_hf(
-            model_name=cfg.nn.encoder.model_name, dataset_name=dataset.name
-        ).state_dict()
-        for dataset in datasets
-    }
+
+    # Load finetuned models - either from local checkpoints or HuggingFace
+    reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
+    finetuned_models = {}
+
+    for dataset in datasets:
+        if reg_suffix:
+            # Load from local checkpoints with regularization suffix
+            dataset_name_with_suffix = f"{dataset.name}{reg_suffix}"
+            local_checkpoint_path = os.path.join(cfg.misc.ckpt_path, dataset_name_with_suffix, "model.pt")
+
+            if os.path.exists(local_checkpoint_path):
+                pylogger.info(f"Loading {dataset.name} from local: {local_checkpoint_path}")
+                from model_merging.utils.io_utils import load_model_from_disk
+                model = load_model_from_disk(local_checkpoint_path, model_name=cfg.nn.encoder.model_name)
+                finetuned_models[dataset] = model.state_dict()
+            else:
+                pylogger.warning(f"Local checkpoint not found: {local_checkpoint_path}, falling back to HuggingFace")
+                finetuned_models[dataset] = load_model_from_hf(
+                    model_name=cfg.nn.encoder.model_name, dataset_name=dataset_name_with_suffix
+                ).state_dict()
+        else:
+            # Load from HuggingFace (original behavior)
+            pylogger.info(f"Loading {dataset.name} from HuggingFace")
+            finetuned_models[dataset] = load_model_from_hf(
+                model_name=cfg.nn.encoder.model_name, dataset_name=dataset.name
+            ).state_dict()
 
     # Apply rotation symmetry alignment if enabled
     if cfg.alignment:
@@ -270,8 +290,15 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
     merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
 
-    # Create merger-specific folder
-    results_path = Path(cfg.misc.results_path) / merger_name
+    # Add regularization suffix to merger name if specified
+    reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
+    if reg_suffix:
+        merger_name_with_suffix = f"{merger_name}{reg_suffix}"
+    else:
+        merger_name_with_suffix = merger_name
+
+    # Create merger-specific folder with regularization suffix
+    results_path = Path(cfg.misc.results_path) / merger_name_with_suffix
     results_path.mkdir(parents=True, exist_ok=True)
 
     # Use pair_name for filename if provided, otherwise use num_tasks
@@ -355,8 +382,15 @@ def run(cfg: DictConfig):
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
     merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
 
-    # Create merger-specific folder
-    results_path = Path(cfg.misc.results_path) / merger_name
+    # Add regularization suffix to merger name if specified
+    reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
+    if reg_suffix:
+        merger_name_with_suffix = f"{merger_name}{reg_suffix}"
+    else:
+        merger_name_with_suffix = merger_name
+
+    # Create merger-specific folder with regularization suffix
+    results_path = Path(cfg.misc.results_path) / merger_name_with_suffix
     results_path.mkdir(parents=True, exist_ok=True)
 
     # Get benchmark name from config (e.g., "N8", "N20")
