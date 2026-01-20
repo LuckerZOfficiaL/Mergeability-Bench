@@ -227,12 +227,10 @@ class ImageClassifier(pl.LightningModule):
         self.lambda_grad_magnitude = lambda_grad_magnitude
 
     def on_test_epoch_end(self):
+        # Compute and log the test accuracy
+        accuracy = self.test_acc.compute().cpu().item()
+        self.log(f"acc/test/{self.task_name}", accuracy, on_step=False, on_epoch=True)
 
         if self.finetuning_accuracy is not None:
-            accuracy = (
-                self.trainer.callback_metrics[f"acc/test/{self.task_name}"].cpu().item()
-            )
-
             normalized_acc = accuracy / self.finetuning_accuracy
-
-            self.log_fn(f"normalized_acc/test/{self.task_name}", normalized_acc)
+            self.log(f"normalized_acc/test/{self.task_name}", normalized_acc, on_step=False, on_epoch=True)

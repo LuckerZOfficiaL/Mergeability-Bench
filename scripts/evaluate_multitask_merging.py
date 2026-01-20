@@ -106,39 +106,16 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
     )[cfg.nn.encoder.model_name]
 
     # only has vision encoder, no text transformer
-    # Load pretrained model from local checkpoint
-    pretrained_checkpoint_path = cfg.misc.pretrained_checkpoint
-    if os.path.exists(pretrained_checkpoint_path):
-        pylogger.info(f"Loading pretrained model from local: {pretrained_checkpoint_path}")
-        from model_merging.utils.io_utils import load_model_from_disk
-        zeroshot_encoder: ImageEncoder = load_model_from_disk(
-            pretrained_checkpoint_path, model_name=cfg.nn.encoder.model_name
-        )
-    else:
-        pylogger.info(f"Loading pretrained model from HuggingFace")
-        zeroshot_encoder: ImageEncoder = load_model_from_hf(
-            model_name=cfg.nn.encoder.model_name
-        )
-
-    # Load finetuned models from local checkpoints
-    finetuned_models = {}
-    for dataset in datasets:
-        # Try to load from local first
-        # Apply regularization suffix if specified
-        reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
-        dataset_name_with_suffix = f"{dataset.name}{reg_suffix}"
-        local_checkpoint_path = os.path.join(cfg.misc.ckpt_path, dataset_name_with_suffix, "model.pt")
-
-        if os.path.exists(local_checkpoint_path):
-            pylogger.info(f"Loading {dataset.name} from local: {local_checkpoint_path}")
-            from model_merging.utils.io_utils import load_model_from_disk
-            model = load_model_from_disk(local_checkpoint_path, model_name=cfg.nn.encoder.model_name)
-            finetuned_models[dataset] = model.state_dict()
-        else:
-            pylogger.info(f"Loading {dataset.name} from HuggingFace (suffix: {reg_suffix})")
-            finetuned_models[dataset] = load_model_from_hf(
-                model_name=cfg.nn.encoder.model_name, dataset_name=dataset_name_with_suffix
-            ).state_dict()
+    zeroshot_encoder: ImageEncoder = load_model_from_hf(
+        model_name=cfg.nn.encoder.model_name
+    )
+    
+    finetuned_models = {
+        dataset: load_model_from_hf(
+            model_name=cfg.nn.encoder.model_name, dataset_name=dataset.name
+        ).state_dict()
+        for dataset in datasets
+    }
 
     # Apply rotation symmetry alignment if enabled
     if cfg.alignment:
@@ -293,15 +270,8 @@ def run_single(cfg: DictConfig, datasets_to_use: Optional[List] = None, pair_nam
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
     merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
 
-    # Add regularization suffix to merger name if specified
-    reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
-    if reg_suffix:
-        merger_name_with_suffix = f"{merger_name}{reg_suffix}"
-    else:
-        merger_name_with_suffix = merger_name
-
-    # Create merger-specific folder with regularization suffix
-    results_path = Path(cfg.misc.results_path) / merger_name_with_suffix
+    # Create merger-specific folder
+    results_path = Path(cfg.misc.results_path) / merger_name
     results_path.mkdir(parents=True, exist_ok=True)
 
     # Use pair_name for filename if provided, otherwise use num_tasks
@@ -385,15 +355,8 @@ def run(cfg: DictConfig):
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
     merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
 
-    # Add regularization suffix to merger name if specified
-    reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
-    if reg_suffix:
-        merger_name_with_suffix = f"{merger_name}{reg_suffix}"
-    else:
-        merger_name_with_suffix = merger_name
-
-    # Create merger-specific folder with regularization suffix
-    results_path = Path(cfg.misc.results_path) / merger_name_with_suffix
+    # Create merger-specific folder
+    results_path = Path(cfg.misc.results_path) / merger_name
     results_path.mkdir(parents=True, exist_ok=True)
 
     # Get benchmark name from config (e.g., "N8", "N20")
