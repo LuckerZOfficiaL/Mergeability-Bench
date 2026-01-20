@@ -11,8 +11,8 @@ import logging
 import copy
 
 # Import from ViT_ImageEncoder_RotationSymmetry
-sys.path.insert(0, '/home/lzhou/MM/ViT_ImageEncoder_RotationSymmetry')
-from src.alignment_utils import (
+sys.path.insert(0, '/home/ubuntu/thesis/MM/ViT_ImageEncoder_RotationSymmetry/src')
+from alignment_utils import (
     extract_attention_params,
     extract_ffn_params,
     chunk_svd_qk,
