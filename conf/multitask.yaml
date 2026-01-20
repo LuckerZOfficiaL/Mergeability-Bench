@@ -10,7 +10,7 @@ defaults:
   - hydra: default
   - nn: default
   - train: default
-  - merger: tsv # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
+  - merger: task_arithmetic # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
   - benchmark: N20 # N14, N8, N20, N2
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
@@ -21,7 +21,7 @@ defaults:
 all_pairwise: true
 
 # Whether to apply rotation alignment before merging
-alignment: true
+alignment: false
 
 seed_index: 0
 num_tasks: ???
@@ -46,6 +46,8 @@ misc:
   svd_path: "${oc.env:MODELS_PATH}/svd_dict_${nn.encoder.model_name}.pt"
   finetuned_accuracy_path: "${oc.env:PROJECT_ROOT}/results/finetuning/accs.json"
   results_path: "${oc.env:PROJECT_ROOT}/results/${nn.encoder.model_name}/"
+  # Regularization suffix for checkpoint names (e.g., "_moderate_update_grad_magnitude", "_moderate_update", "_grad_magnitude", or "")
+  reg_suffix: ""
 
 # Mergeability metrics configuration
 mergeability:

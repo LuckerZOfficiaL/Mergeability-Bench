@@ -3,7 +3,7 @@ deterministic: False
 batch_size: 64 # 128 for B-32, B-16 and 64 for L-14
 
 trainer:
-  max_epochs: ${dataset.ft_epochs} 
+  max_epochs: ${dataset.ft_epochs}
   log_every_n_steps: 1
   fast_dev_run: False
   accelerator: 'gpu'
@@ -15,6 +15,20 @@ trainer:
   val_check_interval: 1.0
   deterministic: ${train.deterministic}
   accumulate_grad_batches: 2 # 1 if B-32, B-16 and 2 if L-14
+
+# Mergeability regularization configuration
+regularization:
+  # R2: Moderate Update Regularization
+  # Penalizes large deviations from pretrained weights
+  # All merge methods show negative coefficients for weight_l2_distance
+  enable_moderate_update: true  # Enable/disable R2 regularization
+  lambda_moderate_update: 0.01  # Weight for R2 regularization term
+
+  # R3: Gradient Magnitude Regularization
+  # Encourages moderate gradient magnitudes (not too large)
+  # All merge methods show negative coefficients for gradient_l2_distance
+  enable_grad_magnitude: true  # Enable/disable R3 regularization
+  lambda_grad_magnitude: 0.001  # Weight for R3 regularization term
 
 restore:
   ckpt_or_run_path: null
@@ -41,7 +55,7 @@ logging:
     _target_: lightning.pytorch.loggers.WandbLogger
 
     project: ${core.project_name}
-    entity: lzhou00
+    entity: null  # Set to your W&B username or use command line override
     log_model: false
     mode: 'online'
     tags: ${core.tags}

@@ -55,6 +55,12 @@ def run(cfg: DictConfig):
         model_name=cfg.nn.encoder.model_name
     )
 
+    # Save pretrained encoder state dict for regularization
+    pretrained_state_dict = {
+        name: param.clone().detach()
+        for name, param in zeroshot_encoder.named_parameters()
+    }
+
     model: ImageClassifier = hydra.utils.instantiate(
         cfg.nn.module,
         encoder=zeroshot_encoder,
@@ -63,6 +69,19 @@ def run(cfg: DictConfig):
     )
 
     model.task_name = cfg.dataset.name
+
+    # Configure mergeability regularization if enabled
+    if hasattr(cfg.train, 'regularization'):
+        model.set_regularization_config(
+            pretrained_state_dict=pretrained_state_dict,
+            enable_moderate_update=cfg.train.regularization.enable_moderate_update,
+            lambda_moderate_update=cfg.train.regularization.lambda_moderate_update,
+            enable_grad_magnitude=cfg.train.regularization.enable_grad_magnitude,
+            lambda_grad_magnitude=cfg.train.regularization.lambda_grad_magnitude,
+        )
+        pylogger.info("Regularization configured:")
+        pylogger.info(f"  R2 (Moderate Update): {cfg.train.regularization.enable_moderate_update}, λ={cfg.train.regularization.lambda_moderate_update}")
+        pylogger.info(f"  R3 (Grad Magnitude): {cfg.train.regularization.enable_grad_magnitude}, λ={cfg.train.regularization.lambda_grad_magnitude}")
 
     dataset = instantiate(
         cfg.dataset,
@@ -89,7 +108,57 @@ def run(cfg: DictConfig):
     pylogger.info("Starting testing!")
     trainer.test(model=model, dataloaders=dataset.test_loader)
 
-    upload_model_to_hf(model.encoder, cfg.nn.encoder.model_name, cfg.dataset.name)
+    # Generate suffix and folder structure based on enabled regularizations
+    reg_suffix = ""
+    parent_folder = ""
+    if hasattr(cfg.train, 'regularization'):
+        reg_parts = []
+        moderate_update_enabled = cfg.train.regularization.enable_moderate_update
+        grad_magnitude_enabled = cfg.train.regularization.enable_grad_magnitude
+
+        if moderate_update_enabled:
+            reg_parts.append("moderate_update")
+        if grad_magnitude_enabled:
+            reg_parts.append("grad_magnitude")
+
+        if reg_parts:
+            reg_suffix = "_" + "_".join(reg_parts)
+
+            # Determine parent folder based on which regularizations are enabled
+            if moderate_update_enabled and grad_magnitude_enabled:
+                parent_folder = "both"
+            elif moderate_update_enabled:
+                parent_folder = "moderate_update"
+            elif grad_magnitude_enabled:
+                parent_folder = "grad_magnitude"
+
+    # Save model locally with regularization suffix in appropriate folder
+    if parent_folder:
+        # Create parent folder first
+        parent_dir = os.path.join(cfg.misc.ckpt_path, parent_folder)
+        os.makedirs(parent_dir, exist_ok=True)
+
+        # Create checkpoint folder inside parent folder
+        local_model_dir = os.path.join(
+            parent_dir,
+            f"{cfg.dataset.name}{reg_suffix}"
+        )
+    else:
+        # No regularization, save directly in ckpt_path
+        local_model_dir = os.path.join(
+            cfg.misc.ckpt_path,
+            cfg.dataset.name
+        )
+
+    os.makedirs(local_model_dir, exist_ok=True)
+    local_model_path = os.path.join(local_model_dir, "model.pt")
+    torch.save(model.encoder.state_dict(), local_model_path)
+    pylogger.info(f"Saved model locally to {local_model_path}")
+
+    # Upload to HuggingFace with regularization suffix in dataset name (optional)
+    # Uncomment if you have HuggingFace credentials configured
+    # dataset_name_with_suffix = f"{cfg.dataset.name}{reg_suffix}"
+    # upload_model_to_hf(model.encoder, cfg.nn.encoder.model_name, dataset_name_with_suffix)
 
     logger.log_configuration(model, cfg)
 

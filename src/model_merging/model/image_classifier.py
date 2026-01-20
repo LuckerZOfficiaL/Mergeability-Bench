@@ -44,10 +44,17 @@ class ImageClassifier(pl.LightningModule):
         self.classification_head = classifier
 
         self.log_fn = lambda metric, val: self.log(
-            metric, val, on_step=False, on_epoch=True
+            metric, val, on_step=True, on_epoch=True
         )
 
         self.finetuning_accuracy = None
+
+        # Mergeability regularization configuration
+        self.pretrained_state_dict = None
+        self.enable_moderate_update = False
+        self.lambda_moderate_update = 0.0
+        self.enable_grad_magnitude = False
+        self.lambda_grad_magnitude = 0.0
 
     def set_encoder(self, encoder: torch.nn.Module):
         """Set the encoder of the model.
@@ -105,7 +112,44 @@ class ImageClassifier(pl.LightningModule):
         return {"logits": logits.detach(), "loss": loss}
 
     def training_step(self, batch: Any, batch_idx: int) -> Mapping[str, Any]:
-        return self._step(batch=batch, split="train")
+        result = self._step(batch=batch, split="train")
+        loss = result["loss"]
+
+        # Add mergeability regularization terms
+        if self.pretrained_state_dict is not None:
+            reg_loss = 0.0
+
+            # R2: Moderate Update Regularization
+            # Penalize large deviations from pretrained weights
+            if self.enable_moderate_update and self.lambda_moderate_update > 0:
+                moderate_update_loss = 0.0
+                for name, param in self.encoder.named_parameters():
+                    if name in self.pretrained_state_dict and param.requires_grad:
+                        pretrained_param = self.pretrained_state_dict[name].to(param.device)
+                        moderate_update_loss += torch.sum((param - pretrained_param) ** 2)
+
+                reg_loss += self.lambda_moderate_update * moderate_update_loss
+                self.log_fn(f"reg/moderate_update/{self.task_name}", moderate_update_loss.detach())
+
+            # R3: Gradient Magnitude Regularization
+            # Encourage moderate gradient magnitudes
+            if self.enable_grad_magnitude and self.lambda_grad_magnitude > 0:
+                grad_magnitude_loss = 0.0
+                for param in self.encoder.parameters():
+                    if param.requires_grad and param.grad is not None:
+                        grad_magnitude_loss += torch.sum(param.grad ** 2)
+
+                # Only add if gradients exist (after first backward pass)
+                if grad_magnitude_loss > 0:
+                    reg_loss += self.lambda_grad_magnitude * grad_magnitude_loss
+                    self.log_fn(f"reg/grad_magnitude/{self.task_name}", grad_magnitude_loss.detach())
+
+            if reg_loss > 0:
+                loss = loss + reg_loss
+                self.log_fn(f"reg/total/{self.task_name}", reg_loss.detach())
+
+        result["loss"] = loss
+        return result
 
     def validation_step(self, batch: Any, batch_idx: int) -> Mapping[str, Any]:
         return self._step(batch=batch, split="val")
@@ -157,6 +201,30 @@ class ImageClassifier(pl.LightningModule):
 
     def set_finetuning_accuracy(self, finetuning_accuracy):
         self.finetuning_accuracy = finetuning_accuracy
+
+    def set_regularization_config(
+        self,
+        pretrained_state_dict: Optional[Dict[str, torch.Tensor]] = None,
+        enable_moderate_update: bool = False,
+        lambda_moderate_update: float = 0.0,
+        enable_grad_magnitude: bool = False,
+        lambda_grad_magnitude: float = 0.0,
+    ):
+        """Configure mergeability regularization.
+
+        Args:
+            pretrained_state_dict: State dict of pretrained encoder weights
+            enable_moderate_update: Enable R2 (moderate update) regularization
+            lambda_moderate_update: Weight for R2 regularization
+            enable_grad_magnitude: Enable R3 (gradient magnitude) regularization
+            lambda_grad_magnitude: Weight for R3 regularization
+        """
+        # Store as CPU tensors, will be moved to device during training
+        self.pretrained_state_dict = pretrained_state_dict
+        self.enable_moderate_update = enable_moderate_update
+        self.lambda_moderate_update = lambda_moderate_update
+        self.enable_grad_magnitude = enable_grad_magnitude
+        self.lambda_grad_magnitude = lambda_grad_magnitude
 
     def on_test_epoch_end(self):
 
