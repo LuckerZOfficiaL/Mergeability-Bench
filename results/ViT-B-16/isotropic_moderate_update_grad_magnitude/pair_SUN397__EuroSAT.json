@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7154660224914551,
+            "loss/test/SUN397_epoch": 0.9717404842376709,
+            "acc/test/SUN397": 0.7154660224914551,
+            "normalized_acc/test/SUN397": 0.9073601365089417
+        }
+    ],
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT_epoch": 0.931851863861084,
+            "loss/test/EuroSAT_epoch": 0.28997212648391724,
+            "acc/test/EuroSAT": 0.931851863861084,
+            "normalized_acc/test/EuroSAT": 0.9405607581138611
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8236589431762695,
+            "normalized_acc/test/avg": 0.9239604473114014
+        }
+    ]
+}

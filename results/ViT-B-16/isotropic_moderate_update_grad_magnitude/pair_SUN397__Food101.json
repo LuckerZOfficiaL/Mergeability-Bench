@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7451385259628296,
+            "loss/test/SUN397_epoch": 0.8698615431785583,
+            "acc/test/SUN397": 0.7451385259628296,
+            "normalized_acc/test/SUN397": 0.9449910521507263
+        }
+    ],
+    "Food101": [
+        {
+            "acc/test/Food101_epoch": 0.9166732430458069,
+            "loss/test/Food101_epoch": 0.28845685720443726,
+            "acc/test/Food101": 0.9166732430458069,
+            "normalized_acc/test/Food101": 1.0084524154663086
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8309058845043182,
+            "normalized_acc/test/avg": 0.9767217338085175
+        }
+    ]
+}

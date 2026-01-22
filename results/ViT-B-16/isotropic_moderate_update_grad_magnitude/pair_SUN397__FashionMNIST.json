@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7303778529167175,
+            "loss/test/SUN397_epoch": 0.9237121939659119,
+            "acc/test/SUN397": 0.7303778529167175,
+            "normalized_acc/test/SUN397": 0.9262714385986328
+        }
+    ],
+    "FashionMNIST": [
+        {
+            "acc/test/FashionMNIST_epoch": 0.8592000007629395,
+            "loss/test/FashionMNIST_epoch": 0.40589722990989685,
+            "acc/test/FashionMNIST": 0.8592000007629395,
+            "normalized_acc/test/FashionMNIST": 0.902521014213562
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7947889268398285,
+            "normalized_acc/test/avg": 0.9143962264060974
+        }
+    ]
+}

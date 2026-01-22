@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7204030156135559,
+            "loss/test/SUN397_epoch": 0.9517309665679932,
+            "acc/test/SUN397": 0.7204030156135559,
+            "normalized_acc/test/SUN397": 0.9136212468147278
+        }
+    ],
+    "CIFAR10": [
+        {
+            "acc/test/CIFAR10_epoch": 0.9708999991416931,
+            "loss/test/CIFAR10_epoch": 0.09786973148584366,
+            "acc/test/CIFAR10": 0.9708999991416931,
+            "normalized_acc/test/CIFAR10": 0.9890994429588318
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8456515073776245,
+            "normalized_acc/test/avg": 0.9513603448867798
+        }
+    ]
+}

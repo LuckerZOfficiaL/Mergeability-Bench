@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7159193754196167,
+            "loss/test/SUN397_epoch": 0.966618001461029,
+            "acc/test/SUN397": 0.7159193754196167,
+            "normalized_acc/test/SUN397": 0.9079350829124451
+        }
+    ],
+    "RenderedSST2": [
+        {
+            "acc/test/RenderedSST2_epoch": 0.6979681253433228,
+            "loss/test/RenderedSST2_epoch": 0.5783641338348389,
+            "acc/test/RenderedSST2": 0.6979681253433228,
+            "normalized_acc/test/RenderedSST2": 0.9046262502670288
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7069437503814697,
+            "normalized_acc/test/avg": 0.9062806665897369
+        }
+    ]
+}

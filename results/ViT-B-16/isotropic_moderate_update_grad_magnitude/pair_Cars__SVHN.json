@@ -1,0 +1,24 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars_epoch": 0.7650789618492126,
+            "loss/test/Cars_epoch": 0.698349118232727,
+            "acc/test/Cars": 0.7650789618492126,
+            "normalized_acc/test/Cars": 0.8917234539985657
+        }
+    ],
+    "SVHN": [
+        {
+            "acc/test/SVHN_epoch": 0.821681022644043,
+            "loss/test/SVHN_epoch": 0.8731001615524292,
+            "acc/test/SVHN": 0.821681022644043,
+            "normalized_acc/test/SVHN": 0.8428560495376587
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7933799922466278,
+            "normalized_acc/test/avg": 0.8672897517681122
+        }
+    ]
+}

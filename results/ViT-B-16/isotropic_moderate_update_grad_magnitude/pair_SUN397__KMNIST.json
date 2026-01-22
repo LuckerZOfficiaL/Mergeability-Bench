@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7280604243278503,
+            "loss/test/SUN397_epoch": 0.9330083131790161,
+            "acc/test/SUN397": 0.7280604243278503,
+            "normalized_acc/test/SUN397": 0.9233324527740479
+        }
+    ],
+    "KMNIST": [
+        {
+            "acc/test/KMNIST_epoch": 0.1671999990940094,
+            "loss/test/KMNIST_epoch": 2.193376064300537,
+            "acc/test/KMNIST": 0.1671999990940094,
+            "normalized_acc/test/KMNIST": 0.17000508308410645
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.44763021171092987,
+            "normalized_acc/test/avg": 0.5466687679290771
+        }
+    ]
+}

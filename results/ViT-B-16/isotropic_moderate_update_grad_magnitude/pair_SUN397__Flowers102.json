@@ -1,0 +1,24 @@
+{
+    "SUN397": [
+        {
+            "acc/test/SUN397_epoch": 0.7135516405105591,
+            "loss/test/SUN397_epoch": 0.9816353917121887,
+            "acc/test/SUN397": 0.7135516405105591,
+            "normalized_acc/test/SUN397": 0.9049323201179504
+        }
+    ],
+    "Flowers102": [
+        {
+            "acc/test/Flowers102_epoch": 0.8590014576911926,
+            "loss/test/Flowers102_epoch": 0.5712701082229614,
+            "acc/test/Flowers102": 0.8590014576911926,
+            "normalized_acc/test/Flowers102": 0.9116327166557312
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.7862765491008759,
+            "normalized_acc/test/avg": 0.9082825183868408
+        }
+    ]
+}

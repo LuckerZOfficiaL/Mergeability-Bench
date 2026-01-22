@@ -1,0 +1,24 @@
+{
+    "Cars": [
+        {
+            "acc/test/Cars_epoch": 0.7548812627792358,
+            "loss/test/Cars_epoch": 0.7144166827201843,
+            "acc/test/Cars": 0.7548812627792358,
+            "normalized_acc/test/Cars": 0.879837691783905
+        }
+    ],
+    "EuroSAT": [
+        {
+            "acc/test/EuroSAT_epoch": 0.9433333277702332,
+            "loss/test/EuroSAT_epoch": 0.24927924573421478,
+            "acc/test/EuroSAT": 0.9433333277702332,
+            "normalized_acc/test/EuroSAT": 0.9521495699882507
+        }
+    ],
+    "avg": [
+        {
+            "acc/test/avg": 0.8491072952747345,
+            "normalized_acc/test/avg": 0.9159936308860779
+        }
+    ]
+}
