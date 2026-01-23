@@ -36,6 +36,17 @@ def normalize_metrics(metrics_array):
     return normalized, min_vals, max_vals
 
 
+def normalize_metrics_with_stats(metrics_array, min_vals, max_vals):
+    """Normalize metrics using pre-computed min/max values (for validation data)."""
+    ranges = max_vals - min_vals
+    ranges[ranges == 0] = 1.0
+
+    normalized = (metrics_array - min_vals) / ranges
+    normalized = normalized * 2 - 1
+
+    return normalized
+
+
 def linear_optimization_single_fold(metrics_train, performance_train,
                                      metrics_val, performance_val,
                                      n_iterations=1000, lr=0.01,
@@ -61,7 +72,7 @@ def linear_optimization_single_fold(metrics_train, performance_train,
     X_val = torch.FloatTensor(metrics_val)
     y_val = torch.FloatTensor(performance_val)
 
-    best_val_loss = float('inf')
+    best_train_loss = float('inf')
     patience_counter = 0
 
     for iteration in range(n_iterations):
@@ -105,8 +116,8 @@ def linear_optimization_single_fold(metrics_train, performance_train,
             val_loss = -val_correlation.item()
 
         # Early stopping
-        if val_loss < best_val_loss - convergence_threshold:
-            best_val_loss = val_loss
+        if loss < best_train_loss - convergence_threshold:
+            best_train_loss = loss
             patience_counter = 0
         else:
             patience_counter += 1
@@ -176,11 +187,15 @@ def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
 
         print(f"  Train pairs: {len(train_indices)}, Val pairs: {len(val_indices)}")
 
-        # Extract data for this fold
-        metrics_train = metrics_array[train_indices]
+        # Extract raw data for this fold
+        metrics_train_raw = metrics_array[train_indices]
         performance_train = performance_array[train_indices]
-        metrics_val = metrics_array[val_indices]
+        metrics_val_raw = metrics_array[val_indices]
         performance_val = performance_array[val_indices]
+
+        # Normalize using ONLY training data statistics (no leakage)
+        metrics_train, min_vals, max_vals = normalize_metrics(metrics_train_raw)
+        metrics_val = normalize_metrics_with_stats(metrics_val_raw, min_vals, max_vals)
 
         # Optimize coefficients for this fold
         coefficients, train_r, val_r, n_iters = linear_optimization_single_fold(
@@ -275,9 +290,9 @@ def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
 
 def main():
     # Configuration
-    metrics_path = Path('/home/ubuntu/thesis/MM/model-merging/results/mergeability/ViT-B-16/pairwise_metrics_N20.json')
-    results_base_path = Path('/home/ubuntu/thesis/MM/model-merging/results/ViT-B-16')
-    output_dir = Path('/home/ubuntu/thesis/MM/model-merging/results/metric_linear_optimization/loto_cv')
+    metrics_path = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/mergeability/ViT-B-16/pairwise_metrics_N20.json')
+    results_base_path = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/ViT-B-16')
+    output_dir = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage')
     output_dir.mkdir(parents=True, exist_ok=True)
 
     merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic']
@@ -313,9 +328,8 @@ def main():
     print(f"Number of merge methods: {len(merge_methods)}")
     print()
 
-    # Normalize metrics
-    print("Normalizing metrics...")
-    metrics_normalized, _, _ = normalize_metrics(metrics_array)
+    # NOTE: Normalization is now done per-fold inside run_loto_cv to avoid leakage
+    print("Normalization will be done per-fold (train stats only, no leakage)")
     print()
 
     # Get list of tasks
@@ -336,9 +350,9 @@ def main():
         # Extract performance for this method
         performance = performance_matrix[:, method_idx]
 
-        # Run LOTO CV
+        # Run LOTO CV (uses raw metrics, normalization done per-fold)
         results = run_loto_cv(
-            metrics_normalized,
+            metrics_array,
             performance,
             pair_names,
             all_tasks,

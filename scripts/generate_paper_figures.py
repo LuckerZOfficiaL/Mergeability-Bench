@@ -24,7 +24,7 @@ plt.rcParams.update({
 })
 
 # Paths
-RESULTS_DIR = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv')
+RESULTS_DIR = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage')
 FIGS_DIR = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/figs')
 FIGS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -383,9 +383,9 @@ def main():
 
     # Generate all figures
     plot_coefficient_heatmap(results)
-    #plot_tsv_scatter(results)
-    #plot_validation_boxplots(results)
-    #plot_category_importance(results)
+    plot_tsv_scatter(results)
+    plot_validation_boxplots(results)
+    plot_category_importance(results)
 
     print("\nAll figures generated successfully!")
     print(f"Figures saved to: {FIGS_DIR}")
