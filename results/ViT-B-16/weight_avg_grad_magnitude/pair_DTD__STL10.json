@@ -1,24 +1,24 @@
 {
     "DTD": [
         {
-            "acc/test/DTD_epoch": 0.73617023229599,
-            "loss/test/DTD_epoch": 0.9569552540779114,
-            "acc/test/DTD": 0.73617023229599,
-            "normalized_acc/test/DTD": 0.8883183598518372
+            "acc/test/DTD_epoch": 0.7329787015914917,
+            "loss/test/DTD_epoch": 0.9538010358810425,
+            "acc/test/DTD": 0.7329787015914917,
+            "normalized_acc/test/DTD": 0.8844671845436096
         }
     ],
     "STL10": [
         {
-            "acc/test/STL10_epoch": 0.9915000200271606,
-            "loss/test/STL10_epoch": 0.027400845661759377,
-            "acc/test/STL10": 0.9915000200271606,
-            "normalized_acc/test/STL10": 1.0036695003509521
+            "acc/test/STL10_epoch": 0.9916250109672546,
+            "loss/test/STL10_epoch": 0.025674359872937202,
+            "acc/test/STL10": 0.9916250109672546,
+            "normalized_acc/test/STL10": 1.003796100616455
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8638351261615753,
-            "normalized_acc/test/avg": 0.9459939301013947
+            "acc/test/avg": 0.8623018562793732,
+            "normalized_acc/test/avg": 0.9441316425800323
         }
     ]
 }

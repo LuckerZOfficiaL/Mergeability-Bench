@@ -1,24 +1,24 @@
 {
     "PCAM": [
         {
-            "acc/test/PCAM_epoch": 0.851287841796875,
-            "loss/test/PCAM_epoch": 0.34272676706314087,
-            "acc/test/PCAM": 0.851287841796875,
-            "normalized_acc/test/PCAM": 0.9594812989234924
+            "acc/test/PCAM_epoch": 0.862335205078125,
+            "loss/test/PCAM_epoch": 0.31611424684524536,
+            "acc/test/PCAM": 0.862335205078125,
+            "normalized_acc/test/PCAM": 0.9719327092170715
         }
     ],
     "KMNIST": [
         {
-            "acc/test/KMNIST_epoch": 0.8457000255584717,
-            "loss/test/KMNIST_epoch": 1.0128284692764282,
-            "acc/test/KMNIST": 0.8457000255584717,
-            "normalized_acc/test/KMNIST": 0.8598881959915161
+            "acc/test/KMNIST_epoch": 0.8589000105857849,
+            "loss/test/KMNIST_epoch": 0.9343766570091248,
+            "acc/test/KMNIST": 0.8589000105857849,
+            "normalized_acc/test/KMNIST": 0.8733096122741699
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8484939336776733,
-            "normalized_acc/test/avg": 0.9096847474575043
+            "acc/test/avg": 0.860617607831955,
+            "normalized_acc/test/avg": 0.9226211607456207
         }
     ]
 }

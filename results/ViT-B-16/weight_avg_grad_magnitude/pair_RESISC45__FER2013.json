@@ -1,24 +1,24 @@
 {
     "RESISC45": [
         {
-            "acc/test/RESISC45_epoch": 0.941428542137146,
-            "loss/test/RESISC45_epoch": 0.1940382570028305,
-            "acc/test/RESISC45": 0.941428542137146,
-            "normalized_acc/test/RESISC45": 0.9738916158676147
+            "acc/test/RESISC45_epoch": 0.942380964756012,
+            "loss/test/RESISC45_epoch": 0.191298246383667,
+            "acc/test/RESISC45": 0.942380964756012,
+            "normalized_acc/test/RESISC45": 0.974876880645752
         }
     ],
     "FER2013": [
         {
-            "acc/test/FER2013_epoch": 0.7157982587814331,
-            "loss/test/FER2013_epoch": 0.9242628812789917,
-            "acc/test/FER2013": 0.7157982587814331,
-            "normalized_acc/test/FER2013": 0.9708994626998901
+            "acc/test/FER2013_epoch": 0.7215101718902588,
+            "loss/test/FER2013_epoch": 0.9188430905342102,
+            "acc/test/FER2013": 0.7215101718902588,
+            "normalized_acc/test/FER2013": 0.978646993637085
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8286134004592896,
-            "normalized_acc/test/avg": 0.9723955392837524
+            "acc/test/avg": 0.8319455683231354,
+            "normalized_acc/test/avg": 0.9767619371414185
         }
     ]
 }

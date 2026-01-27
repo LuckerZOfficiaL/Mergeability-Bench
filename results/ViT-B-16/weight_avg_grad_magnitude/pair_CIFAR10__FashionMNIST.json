@@ -1,24 +1,24 @@
 {
     "CIFAR10": [
         {
-            "acc/test/CIFAR10_epoch": 0.9749000072479248,
-            "loss/test/CIFAR10_epoch": 0.09347457438707352,
-            "acc/test/CIFAR10": 0.9749000072479248,
-            "normalized_acc/test/CIFAR10": 0.9931744337081909
+            "acc/test/CIFAR10_epoch": 0.9711999893188477,
+            "loss/test/CIFAR10_epoch": 0.09248077869415283,
+            "acc/test/CIFAR10": 0.9711999893188477,
+            "normalized_acc/test/CIFAR10": 0.9894050359725952
         }
     ],
     "FashionMNIST": [
         {
-            "acc/test/FashionMNIST_epoch": 0.9269000291824341,
-            "loss/test/FashionMNIST_epoch": 0.20621906220912933,
-            "acc/test/FashionMNIST": 0.9269000291824341,
-            "normalized_acc/test/FashionMNIST": 0.9736344814300537
+            "acc/test/FashionMNIST_epoch": 0.9265000224113464,
+            "loss/test/FashionMNIST_epoch": 0.20730476081371307,
+            "acc/test/FashionMNIST": 0.9265000224113464,
+            "normalized_acc/test/FashionMNIST": 0.9732142686843872
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.9509000182151794,
-            "normalized_acc/test/avg": 0.9834044575691223
+            "acc/test/avg": 0.948850005865097,
+            "normalized_acc/test/avg": 0.9813096523284912
         }
     ]
 }

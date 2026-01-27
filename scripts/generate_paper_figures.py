@@ -36,6 +36,15 @@ METHOD_NAMES = {
     'tsv': 'TSV'
 }
 
+
+METRIC_COUNTS_PER_CATEGORY = {
+    'Task Vector Geometry': 5,
+    'Effective Rank': 7,
+    'Subspace Overlap': 6,
+    'Activation-Based': 4,
+    'Gradient-Based': 6
+}
+
 # Metric categories
 METRIC_CATEGORIES = {
     'Task Vector Geometry': [
@@ -260,121 +269,72 @@ def plot_tsv_scatter(results):
     print(f"Saved TSV scatter plot to {FIGS_DIR / 'tsv_scatter.pdf'}")
 
 
-def plot_validation_boxplots(results):
-    """Generate box plots of per-fold validation correlations."""
-    print("Generating validation box plots...")
-
-    methods = ['arithmetic', 'weight_avg', 'isotropic', 'tsv']
-    method_labels = [METHOD_NAMES[m] for m in methods]
-
-    # Collect validation correlations per fold
-    val_corrs = []
-    for method in methods:
-        fold_results = results[method]['fold_results']
-        corrs = [fold['val_r'] for fold in fold_results]
-        val_corrs.append(corrs)
-
-    # Create figure
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    # Box plot
-    bp = ax.boxplot(val_corrs, labels=method_labels, patch_artist=True)
-
-    # Color boxes
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-    for patch, color in zip(bp['boxes'], colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.7)
-
-    # Add individual points
-    for i, (method, corrs) in enumerate(zip(methods, val_corrs)):
-        x = np.random.normal(i + 1, 0.04, size=len(corrs))
-        ax.scatter(x, corrs, alpha=0.5, s=20, color='black', zorder=3)
-
-    # Add mean markers
-    means = [np.mean(corrs) for corrs in val_corrs]
-    ax.scatter(range(1, len(methods) + 1), means, color='red', marker='D',
-               s=50, zorder=4, label='Mean')
-
-    ax.set_ylabel('Validation Correlation ($r$)')
-    ax.set_xlabel('Merging Method')
-    ax.set_title('LOTO Cross-Validation: Per-Fold Validation Correlations')
-    ax.legend(loc='lower right')
-    ax.grid(True, axis='y', alpha=0.3)
-    ax.set_ylim(-0.2, 1.0)
-
-    # Add mean values as text
-    for i, mean in enumerate(means):
-        ax.text(i + 1, -0.15, '$\\mu$={:.2f}'.format(mean), ha='center', fontsize=9)
-
-    plt.tight_layout()
-    plt.savefig(FIGS_DIR / 'validation_boxplots.pdf', bbox_inches='tight')
-    plt.savefig(FIGS_DIR / 'validation_boxplots.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(f"Saved validation box plots to {FIGS_DIR / 'validation_boxplots.pdf'}")
-
-
 def plot_category_importance(results):
-    """Generate metric category importance bar chart."""
+    """Generate metric category importance bar chart normalized by metric counts."""
     print("Generating metric category importance chart...")
 
     methods = ['arithmetic', 'weight_avg', 'isotropic', 'tsv']
     categories = list(METRIC_CATEGORIES.keys())
-
-    # Compute sum of |coefficients| per category per method
-    importance = np.zeros((len(methods), len(categories)))
+    
+    # 1. Compute sum of |coefficients| per category per method
+    importance_raw = np.zeros((len(methods), len(categories)))
 
     for j, method in enumerate(methods):
         avg_coefs = results[method]['average_coefficients']
         for i, (cat_name, metrics) in enumerate(METRIC_CATEGORIES.items()):
             cat_importance = sum(abs(avg_coefs.get(m, 0)) for m in metrics)
-            importance[j, i] = cat_importance
+            importance_raw[j, i] = cat_importance
 
-    # Normalize per method (to show relative importance)
-    importance_normalized = importance / importance.sum(axis=1, keepdims=True)
+    # 2. Normalize by the number of metrics in each category
+    # This converts "Cumulative Sum" to "Mean Magnitude"
+    counts = np.array([METRIC_COUNTS_PER_CATEGORY[cat] for cat in categories])
+    importance_per_metric = importance_raw / counts
 
-    # Create figure - taller with larger fonts
+    # 3. Normalize per method for the relative plot
+    importance_normalized = importance_per_metric / importance_per_metric.sum(axis=1, keepdims=True)
+
+    # Create figure
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-
-    # Plot 1: Absolute importance (stacked bar)
-    x = np.arange(len(methods))
-    width = 0.6
-    bottom = np.zeros(len(methods))
     colors = plt.cm.Set2(np.linspace(0, 1, len(categories)))
+    x_methods = np.arange(len(methods))
+    width_bar = 0.6
 
+    # Plot 1: Mean Absolute importance (stacked bar)
+    bottom = np.zeros(len(methods))
     for i, (cat, color) in enumerate(zip(categories, colors)):
-        ax1.bar(x, importance[:, i], width, bottom=bottom, label=cat, color=color)
-        bottom += importance[:, i]
+        ax1.bar(x_methods, importance_per_metric[:, i], width_bar, 
+                bottom=bottom, label=cat, color=color)
+        bottom += importance_per_metric[:, i]
 
-    ax1.set_xticks(x)
+    ax1.set_xticks(x_methods)
     ax1.set_xticklabels([METHOD_NAMES[m] for m in methods], rotation=45, ha='right', fontsize=18)
-    ax1.set_ylabel('Sum of $|$Coefficients$|$', fontsize=20)
-    ax1.set_title('Absolute Category Importance', fontsize=22)
+    ax1.set_ylabel('Mean $|$Coefficients$|$', fontsize=20)
+    ax1.set_title('Mean Category Importance', fontsize=22)
     ax1.legend(loc='upper left', fontsize=16)
     ax1.tick_params(axis='y', labelsize=18)
 
     # Plot 2: Relative importance (grouped bar)
-    x = np.arange(len(categories))
-    width = 0.2
+    x_cats = np.arange(len(categories))
+    width_group = 0.2
 
     for i, method in enumerate(methods):
-        offset = (i - 1.5) * width
-        ax2.bar(x + offset, importance_normalized[i], width,
+        offset = (i - 1.5) * width_group
+        ax2.bar(x_cats + offset, importance_normalized[i], width_group,
                 label=METHOD_NAMES[method], color=colors[i] if i < len(colors) else f'C{i}')
 
-    ax2.set_xticks(x)
+    ax2.set_xticks(x_cats)
     ax2.set_xticklabels(categories, rotation=45, ha='right', fontsize=18)
-    ax2.set_ylabel('Relative Importance', fontsize=20)
-    ax2.set_title('Relative Category Importance per Method', fontsize=22)
+    ax2.set_ylabel('Relative Importance (Normalized)', fontsize=20)
+    ax2.set_title('Relative Importance per Metric Category', fontsize=22)
     ax2.legend(loc='upper right', fontsize=16)
-    ax2.set_ylim(0, 0.5)
+    ax2.set_ylim(0, 0.6) # Bumped slightly as normalization might concentrate weights
     ax2.tick_params(axis='y', labelsize=18)
 
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'category_importance.pdf', bbox_inches='tight')
     plt.savefig(FIGS_DIR / 'category_importance.png', bbox_inches='tight', dpi=300)
     plt.close()
-    print(f"Saved category importance chart to {FIGS_DIR / 'category_importance.pdf'}")
+    print(f"Saved normalized category importance chart to {FIGS_DIR / 'category_importance.pdf'}")
 
 
 def main():
@@ -382,9 +342,9 @@ def main():
     results = load_loto_results()
 
     # Generate all figures
-    plot_coefficient_heatmap(results)
-    plot_tsv_scatter(results)
-    plot_validation_boxplots(results)
+    #plot_coefficient_heatmap(results)
+    #plot_tsv_scatter(results)
+    #plot_validation_boxplots(results)
     plot_category_importance(results)
 
     print("\nAll figures generated successfully!")

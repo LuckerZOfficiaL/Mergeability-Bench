@@ -1,24 +1,24 @@
 {
     "Cars": [
         {
-            "acc/test/Cars_epoch": 0.8179330825805664,
-            "loss/test/Cars_epoch": 0.5766606330871582,
-            "acc/test/Cars": 0.8179330825805664,
-            "normalized_acc/test/Cars": 0.9533265233039856
+            "acc/test/Cars_epoch": 0.8186792731285095,
+            "loss/test/Cars_epoch": 0.5732808113098145,
+            "acc/test/Cars": 0.8186792731285095,
+            "normalized_acc/test/Cars": 0.9541962742805481
         }
     ],
     "MNIST": [
         {
-            "acc/test/MNIST_epoch": 0.9937999844551086,
-            "loss/test/MNIST_epoch": 0.04667576774954796,
-            "acc/test/MNIST": 0.9937999844551086,
-            "normalized_acc/test/MNIST": 0.9972904920578003
+            "acc/test/MNIST_epoch": 0.9944999814033508,
+            "loss/test/MNIST_epoch": 0.04030812904238701,
+            "acc/test/MNIST": 0.9944999814033508,
+            "normalized_acc/test/MNIST": 0.9979929327964783
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.9058665335178375,
-            "normalized_acc/test/avg": 0.9753085076808929
+            "acc/test/avg": 0.9065896272659302,
+            "normalized_acc/test/avg": 0.9760946035385132
         }
     ]
 }

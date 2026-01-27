@@ -1,24 +1,24 @@
 {
     "RESISC45": [
         {
-            "acc/test/RESISC45_epoch": 0.9404761791229248,
-            "loss/test/RESISC45_epoch": 0.19685301184654236,
-            "acc/test/RESISC45": 0.9404761791229248,
-            "normalized_acc/test/RESISC45": 0.9729064106941223
+            "acc/test/RESISC45_epoch": 0.9409523606300354,
+            "loss/test/RESISC45_epoch": 0.19342003762722015,
+            "acc/test/RESISC45": 0.9409523606300354,
+            "normalized_acc/test/RESISC45": 0.9733990430831909
         }
     ],
     "DTD": [
         {
-            "acc/test/DTD_epoch": 0.7207446694374084,
-            "loss/test/DTD_epoch": 1.048987865447998,
-            "acc/test/DTD": 0.7207446694374084,
-            "normalized_acc/test/DTD": 0.8697047233581543
+            "acc/test/DTD_epoch": 0.7127659320831299,
+            "loss/test/DTD_epoch": 1.0782426595687866,
+            "acc/test/DTD": 0.7127659320831299,
+            "normalized_acc/test/DTD": 0.8600769639015198
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8306104242801666,
-            "normalized_acc/test/avg": 0.9213055670261383
+            "acc/test/avg": 0.8268591463565826,
+            "normalized_acc/test/avg": 0.9167380034923553
         }
     ]
 }

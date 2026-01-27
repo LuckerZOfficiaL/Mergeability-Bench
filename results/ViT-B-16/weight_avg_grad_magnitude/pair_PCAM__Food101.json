@@ -1,24 +1,24 @@
 {
     "PCAM": [
         {
-            "acc/test/PCAM_epoch": 0.86309814453125,
-            "loss/test/PCAM_epoch": 0.31740084290504456,
-            "acc/test/PCAM": 0.86309814453125,
-            "normalized_acc/test/PCAM": 0.9727926254272461
+            "acc/test/PCAM_epoch": 0.875701904296875,
+            "loss/test/PCAM_epoch": 0.28566792607307434,
+            "acc/test/PCAM": 0.875701904296875,
+            "normalized_acc/test/PCAM": 0.9869982600212097
         }
     ],
     "Food101": [
         {
-            "acc/test/Food101_epoch": 0.8628118634223938,
-            "loss/test/Food101_epoch": 0.4938586354255676,
-            "acc/test/Food101": 0.8628118634223938,
-            "normalized_acc/test/Food101": 0.949198305606842
+            "acc/test/Food101_epoch": 0.8581781983375549,
+            "loss/test/Food101_epoch": 0.5056495070457458,
+            "acc/test/Food101": 0.8581781983375549,
+            "normalized_acc/test/Food101": 0.9441007375717163
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8629550039768219,
-            "normalized_acc/test/avg": 0.9609954655170441
+            "acc/test/avg": 0.866940051317215,
+            "normalized_acc/test/avg": 0.965549498796463
         }
     ]
 }

@@ -21,14 +21,14 @@ regularization:
   # R2: Moderate Update Regularization
   # Penalizes large deviations from pretrained weights
   # All merge methods show negative coefficients for weight_l2_distance
-  enable_moderate_update: true  # Enable/disable R2 regularization
+  enable_moderate_update: false  # Enable/disable R2 regularization
   lambda_moderate_update: 0.01  # Weight for R2 regularization term
 
   # R3: Gradient Magnitude Regularization
   # Encourages moderate gradient magnitudes (not too large)
   # All merge methods show negative coefficients for gradient_l2_distance
   enable_grad_magnitude: true  # Enable/disable R3 regularization
-  lambda_grad_magnitude: 0.001  # Weight for R3 regularization term
+  lambda_grad_magnitude: 0.1  # Weight for R3 regularization term
 
 restore:
   ckpt_or_run_path: null

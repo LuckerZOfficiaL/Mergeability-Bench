@@ -1,24 +1,24 @@
 {
     "FER2013": [
         {
-            "acc/test/FER2013_epoch": 0.6905823349952698,
-            "loss/test/FER2013_epoch": 0.9274833798408508,
-            "acc/test/FER2013": 0.6905823349952698,
-            "normalized_acc/test/FER2013": 0.9366968870162964
+            "acc/test/FER2013_epoch": 0.6827807426452637,
+            "loss/test/FER2013_epoch": 0.9600187540054321,
+            "acc/test/FER2013": 0.6827807426452637,
+            "normalized_acc/test/FER2013": 0.9261149168014526
         }
     ],
     "CIFAR10": [
         {
-            "acc/test/CIFAR10_epoch": 0.9796000123023987,
-            "loss/test/CIFAR10_epoch": 0.07829824835062027,
-            "acc/test/CIFAR10": 0.9796000123023987,
-            "normalized_acc/test/CIFAR10": 0.9979625344276428
+            "acc/test/CIFAR10_epoch": 0.9793999791145325,
+            "loss/test/CIFAR10_epoch": 0.07551393657922745,
+            "acc/test/CIFAR10": 0.9793999791145325,
+            "normalized_acc/test/CIFAR10": 0.9977587461471558
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8350911736488342,
-            "normalized_acc/test/avg": 0.9673297107219696
+            "acc/test/avg": 0.8310903608798981,
+            "normalized_acc/test/avg": 0.9619368314743042
         }
     ]
 }

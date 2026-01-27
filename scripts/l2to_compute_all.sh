@@ -3,12 +3,12 @@ import json
 import numpy as np
 
 # Load results
-results_dir = '/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage'
+results_dir = '/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/l2to_cv_l1_lambda1.0'
 methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic']
 
 all_results = {}
 for method in methods:
-    with open(f'{results_dir}/{method}_loto_results.json') as f:
+    with open(f'{results_dir}/{method}_l2to_results.json') as f:
         all_results[method] = json.load(f)
 
 # 1. Compute metric overlap between methods
@@ -31,30 +31,30 @@ for n_top in [5, 10, 28]:
             pct = overlap / n_top * 100
             print(f"  {m1} vs {m2}: {overlap}/{n_top} ({pct:.0f}%)")
 
-# 2. Validation Pearson correlation range
+# 2. Validation Pearson correlation (aggregate across all held-out pairs)
 print("\n" + "=" * 70)
-print("2. VALIDATION PEARSON CORRELATION RANGE")
+print("2. AGGREGATE VALIDATION PEARSON CORRELATION")
 print("=" * 70)
 
-val_r_means = []
+val_r_values = []
 for method in methods:
-    val_r_mean = all_results[method]['per_fold_stats']['val_r_mean']
-    val_r_std = all_results[method]['per_fold_stats']['val_r_std']
-    val_r_means.append(val_r_mean)
-    print(f"{method}: val_r = {val_r_mean:.4f} ± {val_r_std:.4f}")
+    val_r = all_results[method]['aggregate_metrics']['val_r']
+    val_r_values.append(val_r)
+    print(f"{method}: val_r = {val_r:.4f}")
 
-print(f"\nRange: [{min(val_r_means):.2f}, {max(val_r_means):.2f}]")
+print(f"\nRange: [{min(val_r_values):.2f}, {max(val_r_values):.2f}]")
 
-# 3. Per-fold mean and std for train and validation
+# 3. Per-fold mean and std for training (L2TO has 1 val sample per fold, so aggregate val_r is used)
 print("\n" + "=" * 70)
-print("3. PER-FOLD MEAN AND STD FOR TRAIN/VAL CORRELATIONS")
+print("3. PER-FOLD TRAINING STATS AND AGGREGATE VALIDATION")
 print("=" * 70)
 
-print(f"\n{'Method':<15} {'Train r mean':<15} {'Train r std':<15} {'Val r mean':<15} {'Val r std':<15}")
+print(f"\n{'Method':<15} {'Train r mean':<15} {'Train r std':<15} {'Agg Val r':<15} {'Nonzero mean':<15}")
 print("-" * 75)
 for method in methods:
     stats = all_results[method]['per_fold_stats']
-    print(f"{method:<15} {stats['train_r_mean']:<15.4f} {stats['train_r_std']:<15.4f} {stats['val_r_mean']:<15.4f} {stats['val_r_std']:<15.4f}")
+    agg_val_r = all_results[method]['aggregate_metrics']['val_r']
+    print(f"{method:<15} {stats['train_r_mean']:<15.4f} {stats['train_r_std']:<15.4f} {agg_val_r:<15.4f} {stats['n_nonzero_mean']:<15.1f}")
 
 # 4. Top-5 metrics by average coefficient magnitude
 print("\n" + "=" * 70)
@@ -90,14 +90,14 @@ consistent_sign_metrics.sort(key=lambda x: abs(x[1]), reverse=True)
 
 print(f"\nFound {len(consistent_sign_metrics)} metrics with consistent sign:")
 for metric, avg_coef, sign, coefs in consistent_sign_metrics:
-    coef_str = ", ".join([f"{c:+.1f}" for c in coefs])
+    coef_str = ", ".join([f"{c:+.5f}" for c in coefs])
     print(f"  {sign} {metric}: [{coef_str}] (avg: {avg_coef:+.2f})")
 
 print("\n\nMetrics with INCONSISTENT SIGN across methods:")
 for metric in all_metrics:
     coefs = [all_results[m]['average_coefficients'][metric] for m in methods]
     if not (all(c > 0 for c in coefs) or all(c < 0 for c in coefs)):
-        coef_str = ", ".join([f"{c:+.1f}" for c in coefs])
+        coef_str = ", ".join([f"{c:+.5f}" for c in coefs])
         print(f"  {metric}: [{coef_str}]")
 
 # 7. Global sign agreement across all metrics (no ranking)
@@ -132,6 +132,6 @@ for i, m1 in enumerate(methods):
                 agree += 1
 
         pct = 100 * agree / total if total > 0 else 0.0
-        print(f"{m1} vs {m2}: {agree}/{total} metrics ({pct:.1f}% sign agreement)")
+        print(f"{m1} vs {m2}: {agree}/{total} metrics ({pct:.5f}% sign agreement)")
 
 EOF

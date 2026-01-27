@@ -1,24 +1,24 @@
 {
     "EuroSAT": [
         {
-            "acc/test/EuroSAT_epoch": 0.9648148417472839,
-            "loss/test/EuroSAT_epoch": 0.11607573181390762,
-            "acc/test/EuroSAT": 0.9648148417472839,
-            "normalized_acc/test/EuroSAT": 0.973831832408905
+            "acc/test/EuroSAT_epoch": 0.9666666388511658,
+            "loss/test/EuroSAT_epoch": 0.11207310110330582,
+            "acc/test/EuroSAT": 0.9666666388511658,
+            "normalized_acc/test/EuroSAT": 0.9757009148597717
         }
     ],
     "KMNIST": [
         {
-            "acc/test/KMNIST_epoch": 0.8781999945640564,
-            "loss/test/KMNIST_epoch": 0.5733090043067932,
-            "acc/test/KMNIST": 0.8781999945640564,
-            "normalized_acc/test/KMNIST": 0.8929333686828613
+            "acc/test/KMNIST_epoch": 0.902999997138977,
+            "loss/test/KMNIST_epoch": 0.5016248226165771,
+            "acc/test/KMNIST": 0.902999997138977,
+            "normalized_acc/test/KMNIST": 0.918149471282959
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.9215074181556702,
-            "normalized_acc/test/avg": 0.9333826005458832
+            "acc/test/avg": 0.9348333179950714,
+            "normalized_acc/test/avg": 0.9469251930713654
         }
     ]
 }

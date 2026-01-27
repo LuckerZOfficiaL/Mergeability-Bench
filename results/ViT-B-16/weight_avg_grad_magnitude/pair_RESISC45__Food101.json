@@ -1,24 +1,24 @@
 {
     "RESISC45": [
         {
-            "acc/test/RESISC45_epoch": 0.9338095188140869,
-            "loss/test/RESISC45_epoch": 0.21516241133213043,
-            "acc/test/RESISC45": 0.9338095188140869,
-            "normalized_acc/test/RESISC45": 0.9660098552703857
+            "acc/test/RESISC45_epoch": 0.9344444274902344,
+            "loss/test/RESISC45_epoch": 0.21201445162296295,
+            "acc/test/RESISC45": 0.9344444274902344,
+            "normalized_acc/test/RESISC45": 0.9666666984558105
         }
     ],
     "Food101": [
         {
-            "acc/test/Food101_epoch": 0.9166732430458069,
-            "loss/test/Food101_epoch": 0.32224810123443604,
-            "acc/test/Food101": 0.9166732430458069,
-            "normalized_acc/test/Food101": 1.0084524154663086
+            "acc/test/Food101_epoch": 0.9152079224586487,
+            "loss/test/Food101_epoch": 0.3258220851421356,
+            "acc/test/Food101": 0.9152079224586487,
+            "normalized_acc/test/Food101": 1.0068403482437134
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.9252413809299469,
-            "normalized_acc/test/avg": 0.9872311353683472
+            "acc/test/avg": 0.9248261749744415,
+            "normalized_acc/test/avg": 0.986753523349762
         }
     ]
 }

@@ -1,24 +1,24 @@
 {
     "SUN397": [
         {
-            "acc/test/SUN397_epoch": 0.76261967420578,
-            "loss/test/SUN397_epoch": 0.8320666551589966,
-            "acc/test/SUN397": 0.76261967420578,
-            "normalized_acc/test/SUN397": 0.9671608209609985
+            "acc/test/SUN397_epoch": 0.761662483215332,
+            "loss/test/SUN397_epoch": 0.840084433555603,
+            "acc/test/SUN397": 0.761662483215332,
+            "normalized_acc/test/SUN397": 0.9659468531608582
         }
     ],
     "STL10": [
         {
-            "acc/test/STL10_epoch": 0.9901250004768372,
-            "loss/test/STL10_epoch": 0.0352095365524292,
-            "acc/test/STL10": 0.9901250004768372,
-            "normalized_acc/test/STL10": 1.0022776126861572
+            "acc/test/STL10_epoch": 0.9897500276565552,
+            "loss/test/STL10_epoch": 0.03411797061562538,
+            "acc/test/STL10": 0.9897500276565552,
+            "normalized_acc/test/STL10": 1.0018980503082275
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8763723373413086,
-            "normalized_acc/test/avg": 0.9847192168235779
+            "acc/test/avg": 0.8757062554359436,
+            "normalized_acc/test/avg": 0.9839224517345428
         }
     ]
 }

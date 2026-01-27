@@ -1,24 +1,24 @@
 {
     "STL10": [
         {
-            "acc/test/STL10_epoch": 0.9888749718666077,
-            "loss/test/STL10_epoch": 0.03623845800757408,
-            "acc/test/STL10": 0.9888749718666077,
-            "normalized_acc/test/STL10": 1.0010122060775757
+            "acc/test/STL10_epoch": 0.9898750185966492,
+            "loss/test/STL10_epoch": 0.033509377390146255,
+            "acc/test/STL10": 0.9898750185966492,
+            "normalized_acc/test/STL10": 1.002024531364441
         }
     ],
     "Food101": [
         {
-            "acc/test/Food101_epoch": 0.9159603714942932,
-            "loss/test/Food101_epoch": 0.30692732334136963,
-            "acc/test/Food101": 0.9159603714942932,
-            "normalized_acc/test/Food101": 1.007668137550354
+            "acc/test/Food101_epoch": 0.9184554219245911,
+            "loss/test/Food101_epoch": 0.30040788650512695,
+            "acc/test/Food101": 0.9184554219245911,
+            "normalized_acc/test/Food101": 1.0104130506515503
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.9524176716804504,
-            "normalized_acc/test/avg": 1.0043401718139648
+            "acc/test/avg": 0.9541652202606201,
+            "normalized_acc/test/avg": 1.0062187910079956
         }
     ]
 }

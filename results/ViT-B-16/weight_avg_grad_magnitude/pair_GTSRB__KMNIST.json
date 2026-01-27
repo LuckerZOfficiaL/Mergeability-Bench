@@ -1,24 +1,24 @@
 {
     "GTSRB": [
         {
-            "acc/test/GTSRB_epoch": 0.9448931217193604,
-            "loss/test/GTSRB_epoch": 0.23457574844360352,
-            "acc/test/GTSRB": 0.9448931217193604,
-            "normalized_acc/test/GTSRB": 0.9552549719810486
+            "acc/test/GTSRB_epoch": 0.93254154920578,
+            "loss/test/GTSRB_epoch": 0.2636758089065552,
+            "acc/test/GTSRB": 0.93254154920578,
+            "normalized_acc/test/GTSRB": 0.9427679777145386
         }
     ],
     "KMNIST": [
         {
-            "acc/test/KMNIST_epoch": 0.9025999903678894,
-            "loss/test/KMNIST_epoch": 0.3896588087081909,
-            "acc/test/KMNIST": 0.9025999903678894,
-            "normalized_acc/test/KMNIST": 0.9177427291870117
+            "acc/test/KMNIST_epoch": 0.9035000205039978,
+            "loss/test/KMNIST_epoch": 0.4357949197292328,
+            "acc/test/KMNIST": 0.9035000205039978,
+            "normalized_acc/test/KMNIST": 0.9186578989028931
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.9237465560436249,
-            "normalized_acc/test/avg": 0.9364988505840302
+            "acc/test/avg": 0.9180207848548889,
+            "normalized_acc/test/avg": 0.9307129383087158
         }
     ]
 }

@@ -6,6 +6,12 @@ This script performs LOTO CV for linear mergeability prediction:
 - For each of 20 tasks, train on 19 tasks and validate on 1 held-out task
 - Aggregate results across all folds
 - Provides robust coefficient estimates and performance metrics
+
+Usage:
+    python scripts/linear_optimization_loto.py
+    python scripts/linear_optimization_loto.py --exclude_metrics effective_rank stable_rank
+    python scripts/linear_optimization_loto.py --exclude_group eff_rank --output_suffix no_eff_rank
+    python scripts/linear_optimization_loto.py --exclude_group grad_based --output_suffix no_grad_based
 """
 import sys
 from pathlib import Path
@@ -15,11 +21,55 @@ import torch
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import seaborn as sns
+import argparse
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from model_merging.data_loader import load_json, extract_all_mergers_data
+
+# Define metric groups for ablation
+METRIC_GROUPS = {
+    'eff_rank': [
+        'effective_rank',
+        'effective_rank_mergeability_score',
+        'layerwise_effective_rank',
+        'layerwise_effective_rank_mergeability_score',
+        'stable_rank',
+        'spectral_gap',
+        'singular_value_ratio',
+    ],
+    'grad_based': [
+        'encoder_gradient_cosine_similarity',
+        'encoder_gradient_l2_distance',
+        'encoder_gradient_dot_product',
+        'input_gradient_cosine_similarity',
+        'input_gradient_l2_distance',
+        'input_gradient_dot_product',
+    ],
+    'activation': [
+        'activation_l2_distance',
+        'activation_cosine_similarity',
+        'activation_magnitude_ratio',
+        'activation_dot_product',
+    ],
+    'subspace': [
+        'right_subspace_overlap',
+        'right_subspace_overlap_top_k',
+        'right_subspace_overlap_bottom_k',
+        'subspace_overlap',
+        'singular_value_overlap',
+        'interaction_matrix_overlap_top_k',
+        'interaction_matrix_overlap_bottom_k',
+    ],
+    'task_vector': [
+        'task_vector_cosine_similarity',
+        'task_vector_l2_distance',
+        'task_vector_dot_product',
+        'task_vector_magnitude_ratio',
+        'weight_space_angle',
+    ],
+}
 
 
 def normalize_metrics(metrics_array):
@@ -289,10 +339,30 @@ def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
 
 
 def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='LOTO Cross-Validation for Linear Optimization')
+    parser.add_argument('--exclude_metrics', type=str, nargs='+', default=[],
+                        help='List of metric names to exclude')
+    parser.add_argument('--exclude_group', type=str, choices=list(METRIC_GROUPS.keys()),
+                        help='Exclude a predefined group of metrics (eff_rank, grad_based, activation, subspace, task_vector)')
+    parser.add_argument('--output_suffix', type=str, default='',
+                        help='Suffix to add to output directory name')
+    args = parser.parse_args()
+
+    # Determine which metrics to exclude
+    exclude_metrics = set(args.exclude_metrics)
+    if args.exclude_group:
+        exclude_metrics.update(METRIC_GROUPS[args.exclude_group])
+
     # Configuration
     metrics_path = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/mergeability/ViT-B-16/pairwise_metrics_N20.json')
     results_base_path = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/ViT-B-16')
-    output_dir = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage')
+
+    # Output directory with optional suffix
+    if args.output_suffix:
+        output_dir = Path(f'/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_{args.output_suffix}')
+    else:
+        output_dir = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage')
     output_dir.mkdir(parents=True, exist_ok=True)
 
     merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic']
@@ -301,6 +371,10 @@ def main():
     print("Linear Optimization with LOTO Cross-Validation")
     print("="*70)
     print()
+
+    if exclude_metrics:
+        print(f"EXCLUDING METRICS: {sorted(exclude_metrics)}")
+        print()
 
     # Load metrics data
     print("Loading data...")
@@ -322,6 +396,15 @@ def main():
     print("Extracting pairwise data...")
     metrics_array, performance_matrix, pair_names, metric_names, merge_methods = \
         extract_all_mergers_data(metrics_data, performance_data_dict)
+
+    # Filter out excluded metrics
+    if exclude_metrics:
+        keep_indices = [i for i, name in enumerate(metric_names) if name not in exclude_metrics]
+        excluded_count = len(metric_names) - len(keep_indices)
+        metric_names = [metric_names[i] for i in keep_indices]
+        metrics_array = metrics_array[:, keep_indices]
+        print(f"Excluded {excluded_count} metrics, {len(metric_names)} remaining")
+        print()
 
     print(f"Number of pairs: {len(pair_names)}")
     print(f"Number of metrics: {len(metric_names)}")
@@ -373,13 +456,21 @@ def main():
         print(f"Saved results to: {method_output_file}")
         print()
 
-    # Save combined results
+    # Save combined results with metadata
+    combined_results = {
+        'excluded_metrics': sorted(exclude_metrics) if exclude_metrics else [],
+        'n_metrics_used': len(metric_names),
+        'metrics_used': metric_names,
+        'methods': all_results
+    }
     combined_output_file = output_dir / 'all_methods_loto_results.json'
     with open(combined_output_file, 'w') as f:
-        json.dump(all_results, f, indent=2)
+        json.dump(combined_results, f, indent=2)
 
     print("="*70)
     print("SUMMARY: LOTO Cross-Validation Results")
+    if exclude_metrics:
+        print(f"(Excluded: {args.exclude_group or 'custom'} - {len(exclude_metrics)} metrics)")
     print("="*70)
     print()
     print(f"{'Method':<15} {'Train r':<12} {'Val r':<12} {'Val r std':<12}")

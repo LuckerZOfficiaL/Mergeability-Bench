@@ -1,24 +1,24 @@
 {
     "CIFAR100": [
         {
-            "acc/test/CIFAR100_epoch": 0.8669999837875366,
-            "loss/test/CIFAR100_epoch": 0.5317405462265015,
-            "acc/test/CIFAR100": 0.8669999837875366,
-            "normalized_acc/test/CIFAR100": 0.9712108969688416
+            "acc/test/CIFAR100_epoch": 0.8611000180244446,
+            "loss/test/CIFAR100_epoch": 0.5668933391571045,
+            "acc/test/CIFAR100": 0.8611000180244446,
+            "normalized_acc/test/CIFAR100": 0.9646017551422119
         }
     ],
     "Food101": [
         {
-            "acc/test/Food101_epoch": 0.890930712223053,
-            "loss/test/Food101_epoch": 0.4237385094165802,
-            "acc/test/Food101": 0.890930712223053,
-            "normalized_acc/test/Food101": 0.9801324605941772
+            "acc/test/Food101_epoch": 0.8942574262619019,
+            "loss/test/Food101_epoch": 0.40481022000312805,
+            "acc/test/Food101": 0.8942574262619019,
+            "normalized_acc/test/Food101": 0.9837923049926758
         }
     ],
     "avg": [
         {
-            "acc/test/avg": 0.8789653480052948,
-            "normalized_acc/test/avg": 0.9756716787815094
+            "acc/test/avg": 0.8776787221431732,
+            "normalized_acc/test/avg": 0.9741970300674438
         }
     ]
 }
