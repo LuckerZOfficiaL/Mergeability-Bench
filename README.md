@@ -1,6 +1,6 @@
 # 
 
-Utils and methods for weight-space merging.
+This repository contains utilities and methods for weight-space merging and mergeability analysis. The repository is based on the implementation of **Donato Crisostomi** - [donatocrisostomi@gmail.com](mailto:donatocrisostomi@gmail.com)
 
 ---
 
@@ -14,20 +14,6 @@ uv sync
 
 ---
 
-## 📂 Project Structure
-
-```
-/
-├── src/                     # Source directory
-│   ├── model-merging/  # Main package
-│   │   ├── __init__.py
-│   │   ├── main.py
-├── pyproject.toml           # Package configuration
-├── README.md                # This file
-└── LICENSE                  # License information
-```
-
----
 
 ## Multi-Task Merging
 
@@ -38,15 +24,3 @@ uv run scripts/evaluate_multi_task_merging.py
 ```
 
 If you want to define a new merging method, create a new class in `src/model_merging/merger/` and a corresponding config in `conf/merger`. Then change the `merger` field in the `multitask.yaml` config.
-
-## 👤 Maintainers
-
-
-- **Donato Crisostomi** - [donatocrisostomi@gmail.com](mailto:donatocrisostomi@gmail.com)
-
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT** License. See [LICENSE](LICENSE) for more details.
