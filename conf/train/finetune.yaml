@@ -28,7 +28,7 @@ regularization:
   # Encourages moderate gradient magnitudes (not too large)
   # All merge methods show negative coefficients for gradient_l2_distance
   enable_grad_magnitude: true  # Enable/disable R3 regularization
-  lambda_grad_magnitude: 0.1  # Weight for R3 regularization term
+  lambda_grad_magnitude: 1  # Weight for R3 regularization term
 
 restore:
   ckpt_or_run_path: null

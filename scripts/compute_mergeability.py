@@ -210,6 +210,43 @@ def run(cfg: DictConfig) -> Dict:
     pylogger.info(f"Computing metrics: {metrics_to_compute}")
     pylogger.info(f"Layer-wise mode: {layer_wise}")
 
+    # Determine output path early for progress tracking
+    output_path = Path(cfg.mergeability.output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+    benchmark_name = cfg.mergeability.get("benchmark_name", None)
+    rot_sym_align = cfg.mergeability.get("rot_sym_align", False)
+    rot_suffix = "_rot_aligned" if rot_sym_align else ""
+
+    if benchmark_name:
+        output_file = output_path / f"pairwise_metrics_{benchmark_name}{rot_suffix}.json"
+    else:
+        datasets_suffix = "_".join(dataset_names)
+        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}{rot_suffix}.json"
+
+    # Progress tracking file for resuming interrupted runs
+    progress_file = output_path / f"progress_{output_file.stem}.json"
+
+    # Load existing progress and results if available
+    completed_pairs = set()
+    existing_results = None
+    if progress_file.exists():
+        try:
+            with open(progress_file, "r") as f:
+                progress_data = json.load(f)
+                completed_pairs = set(progress_data.get("completed_pairs", []))
+            pylogger.info(f"Loaded progress: {len(completed_pairs)} pairs already completed")
+        except Exception as e:
+            pylogger.warning(f"Failed to load progress file: {e}")
+
+    if output_file.exists():
+        try:
+            with open(output_file, "r") as f:
+                existing_results = json.load(f)
+            pylogger.info(f"Loaded existing results with {len(existing_results.get('metrics', {}))} metrics")
+        except Exception as e:
+            pylogger.warning(f"Failed to load existing results: {e}")
+            existing_results = None
+
     # Initialize results structure
     # For each metric, we store an NxN matrix (upper triangular)
     results = {
@@ -250,6 +287,32 @@ def run(cfg: DictConfig) -> Dict:
             name_i = dataset_names[i]
             name_j = dataset_names[j]
             pair_key = f"{name_i}__{name_j}"
+
+            # Skip if this pair was already computed (for resuming interrupted runs)
+            if pair_key in completed_pairs:
+                pylogger.info(f"[{pair_idx}/{n_pairs}] Skipping {name_i} vs {name_j} (already computed)")
+                # Copy existing results for this pair
+                if existing_results is not None:
+                    for metric_name in metrics_to_compute:
+                        # Handle tuple metrics
+                        if metric_name in TUPLE_METRICS:
+                            for output_name in TUPLE_METRICS[metric_name]:
+                                if output_name in existing_results.get("metrics", {}):
+                                    existing_metric = existing_results["metrics"][output_name]
+                                    if pair_key in existing_metric.get("pairs", {}):
+                                        results["metrics"][output_name]["matrix"][i][j] = existing_metric["pairs"][pair_key]
+                                        results["metrics"][output_name]["pairs"][pair_key] = existing_metric["pairs"][pair_key]
+                                        if layer_wise and "per_layer" in existing_metric:
+                                            results["metrics"][output_name]["per_layer"][pair_key] = existing_metric["per_layer"].get(pair_key)
+                        else:
+                            if metric_name in existing_results.get("metrics", {}):
+                                existing_metric = existing_results["metrics"][metric_name]
+                                if pair_key in existing_metric.get("pairs", {}):
+                                    results["metrics"][metric_name]["matrix"][i][j] = existing_metric["pairs"][pair_key]
+                                    results["metrics"][metric_name]["pairs"][pair_key] = existing_metric["pairs"][pair_key]
+                                    if layer_wise and "per_layer" in existing_metric:
+                                        results["metrics"][metric_name]["per_layer"][pair_key] = existing_metric["per_layer"].get(pair_key)
+                continue
 
             pylogger.info(f"[{pair_idx}/{n_pairs}] Computing metrics for {name_i} vs {name_j}")
 
@@ -375,6 +438,19 @@ def run(cfg: DictConfig) -> Dict:
                         results["metrics"][metric_name]["matrix"][i][j] = None
                         results["metrics"][metric_name]["pairs"][pair_key] = None
 
+            # Mark this pair as completed and save progress
+            completed_pairs.add(pair_key)
+            try:
+                # Save progress file
+                with open(progress_file, "w") as f:
+                    json.dump({"completed_pairs": list(completed_pairs)}, f)
+                # Save intermediate results
+                with open(output_file, "w") as f:
+                    json.dump(results, f, indent=2, default=str)
+                pylogger.info(f"    Progress saved ({len(completed_pairs)}/{n_pairs} pairs)")
+            except Exception as e:
+                pylogger.warning(f"Failed to save progress: {e}")
+
     # Clean up activation/gradient resources if they were used
     if needs_activation_data:
         del calibration_loader
@@ -382,59 +458,16 @@ def run(cfg: DictConfig) -> Dict:
         del pretrained_encoder
         torch.cuda.empty_cache()
 
-    # Save results
-    output_path = Path(cfg.mergeability.output_path)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    # Use benchmark_name if provided, otherwise fall back to listing datasets
-    benchmark_name = cfg.mergeability.get("benchmark_name", None)
-    rot_sym_align = cfg.mergeability.get("rot_sym_align", False)
-
-    # Add rotation alignment suffix if enabled
-    rot_suffix = "_rot_aligned" if rot_sym_align else ""
-
-    if benchmark_name:
-        output_file = output_path / f"pairwise_metrics_{benchmark_name}{rot_suffix}.json"
-    else:
-        datasets_suffix = "_".join(dataset_names)
-        output_file = output_path / f"pairwise_metrics_{n_datasets}tasks_{datasets_suffix}{rot_suffix}.json"
-
-    # Load existing results if file exists and merge new metrics
-    if output_file.exists():
-        pylogger.info(f"Loading existing results from {output_file}")
-        with open(output_file, "r") as f:
-            existing_results = json.load(f)
-
-        # Verify compatibility
-        if existing_results.get("model_name") != results["model_name"]:
-            pylogger.warning(
-                f"Model name mismatch: existing={existing_results.get('model_name')}, "
-                f"current={results['model_name']}"
-            )
-        if existing_results.get("datasets") != results["datasets"]:
-            pylogger.warning(
-                f"Dataset list mismatch: existing={existing_results.get('datasets')}, "
-                f"current={results['datasets']}"
-            )
-
-        # Merge metrics: new metrics will overwrite existing ones if they have the same name
-        for metric_name, metric_data in results["metrics"].items():
-            if metric_name in existing_results["metrics"]:
-                pylogger.info(f"Overwriting existing metric: {metric_name}")
-            else:
-                pylogger.info(f"Adding new metric: {metric_name}")
-            existing_results["metrics"][metric_name] = metric_data
-
-        # Use the merged results
-        results = existing_results
-        pylogger.info(f"Merged results now contain {len(results['metrics'])} metrics")
-    else:
-        pylogger.info(f"No existing results found, creating new file")
-
+    # Final save of results (output_path and output_file already defined earlier)
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
     pylogger.info(f"Results saved to {output_file}")
+
+    # Clean up progress file on successful completion
+    if progress_file.exists():
+        progress_file.unlink()
+        pylogger.info(f"Removed progress file: {progress_file}")
 
     # Print summary
     pylogger.info("=" * 60)

@@ -90,10 +90,10 @@ METRIC_CATEGORIES = {
 # Short metric names for display (LaTeX-safe)
 METRIC_SHORT_NAMES = {
     'task_vector_cosine_similarity': r'TV Cosine Sim.',
-    'task_vector_l2_distance': r'Task Vector L2 Distance',
-    'task_vector_dot_product': r'Task Vector Dot Product',
-    'weight_space_angle': r'Task Vector Angle',
-    'task_vector_magnitude_ratio': r'Task Vector Magnitude Ratio',
+    'task_vector_l2_distance': r'TV L2 Dist.',
+    'task_vector_dot_product': r'TV Dot',
+    'weight_space_angle': r'TV Angle',
+    'task_vector_magnitude_ratio': r'TV Magn. Ratio',
     'effective_rank': r'Effective Rank',
     'effective_rank_mergeability_score': r'Eff Rank Score',
     'stable_rank': r'Stable Rank',
@@ -101,22 +101,22 @@ METRIC_SHORT_NAMES = {
     'singular_value_ratio': r'Singular Value Ratio',
     'layerwise_effective_rank': r'Layer Eff. Rank',
     'layerwise_effective_rank_mergeability_score': r'Layer Eff. Rank Score',
-    'singular_value_overlap': r'Singular Value Overlap',
-    'subspace_overlap': r'Left Subspace Top-$k$',
-    'right_subspace_overlap_top_k': r'Right Subspace Top-$k$',
-    'right_subspace_overlap_bottom_k': r'Right Subspace Bottom-$k$',
+    'singular_value_overlap': r'SV Overlap',
+    'subspace_overlap': r'Left Sub. Top-$k$',
+    'right_subspace_overlap_top_k': r'Right Sub. Top-$k$',
+    'right_subspace_overlap_bottom_k': r'Right Sub. Bottom-$k$',
     'interaction_matrix_overlap_top_k': r'Interaction Top-$k$',
     'interaction_matrix_overlap_bottom_k': r'Interaction Bottom-$k$',
-    'activation_l2_distance': r'Activation L2 Distance',
-    'activation_cosine_similarity': r'Activation Cosine Sim.',
-    'activation_magnitude_ratio': r'Activation Magnitude Ratio',
-    'activation_dot_product': r'Activation Dot Product',
-    'encoder_gradient_cosine_similarity': r'Encoder Gradient Cosine Sim.',
-    'encoder_gradient_l2_distance': r'Encoder Gradient L2 Dist.',
-    'encoder_gradient_dot_product': r'Encoder Gradient Dot Product',
-    'input_gradient_cosine_similarity': r'Input Gradient Cosine Sim.',
-    'input_gradient_l2_distance': r'Input Gradient L2 Dist.',
-    'input_gradient_dot_product': r'Input Gradient Dot Product',
+    'activation_l2_distance': r'Activation L2 Dist.',
+    'activation_cosine_similarity': r'Activation Cos. Sim.',
+    'activation_magnitude_ratio': r'Activation Magn. Ratio',
+    'activation_dot_product': r'Activation Dot',
+    'encoder_gradient_cosine_similarity': r'Enc. Gradd. Cos. Sim.',
+    'encoder_gradient_l2_distance': r'Enc. Grad. L2 Dist.',
+    'encoder_gradient_dot_product': r'Enc. Grad. Dot',
+    'input_gradient_cosine_similarity': r'Input Grad. Cos. Sim.',
+    'input_gradient_l2_distance': r'Input Grad. L2 Dist.',
+    'input_gradient_dot_product': r'Input Grad. Dot',
 }
 
 
@@ -146,16 +146,16 @@ def plot_coefficient_heatmap(results):
         all_metrics.extend(metrics)
     category_boundaries.append(len(all_metrics))
 
-    # Build coefficient matrix
-    coef_matrix = np.zeros((len(all_metrics), len(methods)))
+    # Build coefficient matrix (transposed: rows=methods, cols=metrics)
+    coef_matrix = np.zeros((len(methods), len(all_metrics)))
     for j, method in enumerate(methods):
         avg_coefs = results[method]['average_coefficients']
         for i, metric in enumerate(all_metrics):
             if metric in avg_coefs:
-                coef_matrix[i, j] = avg_coefs[metric]
+                coef_matrix[j, i] = avg_coefs[metric]
 
-    # Create figure with extra space on the right for colorbar
-    fig, ax = plt.subplots(figsize=(8, 12))
+    # Create figure with extra space at bottom for colorbar
+    fig, ax = plt.subplots(figsize=(16, 5))
 
     # Normalize for better visualization (clip extreme values)
     vmax = np.percentile(np.abs(coef_matrix), 95)
@@ -164,27 +164,29 @@ def plot_coefficient_heatmap(results):
     im = ax.imshow(coef_matrix, cmap='RdBu_r', aspect='auto',
                    vmin=-vmax, vmax=vmax)
 
-    # Labels
-    ax.set_xticks(range(len(methods)))
-    ax.set_xticklabels([METHOD_NAMES[m] for m in methods], rotation=45, ha='right', fontsize=18)
-    ax.set_yticks(range(len(all_metrics)))
-    ax.set_yticklabels([METRIC_SHORT_NAMES.get(m, m) for m in all_metrics], fontsize=18)
+    # Labels (swapped: x=metrics, y=methods)
+    ax.set_xticks(range(len(all_metrics)))
+    ax.set_xticklabels([METRIC_SHORT_NAMES.get(m, m) for m in all_metrics], rotation=45, ha='right', fontsize=18)
+    ax.set_yticks(range(len(methods)))
+    ax.set_yticklabels([METHOD_NAMES[m] for m in methods], fontsize=18)
 
-    # Add category separators
+    # Add category separators (vertical lines instead of horizontal)
     for boundary in category_boundaries[1:-1]:
-        ax.axhline(y=boundary - 0.5, color='black', linewidth=1.5)
+        ax.axvline(x=boundary - 0.5, color='black', linewidth=1.5)
 
-    # Colorbar - position it explicitly to avoid overlap
-    cbar_ax = fig.add_axes([0.78, 0.25, 0.03, 0.5])  # [left, bottom, width, height]
-    cbar = fig.colorbar(im, cax=cbar_ax)
+    # Colorbar - position it at the top
+    cbar_ax = fig.add_axes([0.25, 0.92, 0.5, 0.03])  # [left, bottom, width, height]
+    cbar = fig.colorbar(im, cax=cbar_ax, orientation='horizontal')
     cbar.set_label('Average Coefficient', fontsize=18)
     cbar_ax.tick_params(labelsize=16)
+    cbar_ax.xaxis.set_label_position('top')
+    cbar_ax.xaxis.set_ticks_position('top')
 
-    ax.set_xlabel('Merging Method', fontsize=18)
+    ax.set_ylabel('Merging Method', fontsize=18)
     #ax.set_title('Learned Coefficients Across Merging Methods', fontsize=20)
 
     # Adjust layout
-    plt.subplots_adjust(left=0.25, right=0.75)
+    plt.subplots_adjust(top=0.85, bottom=0.15)
     plt.savefig(FIGS_DIR / 'coefficient_heatmap.pdf', bbox_inches='tight')
     plt.savefig(FIGS_DIR / 'coefficient_heatmap.png', bbox_inches='tight', dpi=300)
     plt.close()
@@ -342,10 +344,10 @@ def main():
     results = load_loto_results()
 
     # Generate all figures
-    #plot_coefficient_heatmap(results)
+    plot_coefficient_heatmap(results)
     #plot_tsv_scatter(results)
     #plot_validation_boxplots(results)
-    plot_category_importance(results)
+    #plot_category_importance(results)
 
     print("\nAll figures generated successfully!")
     print(f"Figures saved to: {FIGS_DIR}")

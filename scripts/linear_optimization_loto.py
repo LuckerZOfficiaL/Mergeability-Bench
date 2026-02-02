@@ -12,6 +12,7 @@ Usage:
     python scripts/linear_optimization_loto.py --exclude_metrics effective_rank stable_rank
     python scripts/linear_optimization_loto.py --exclude_group eff_rank --output_suffix no_eff_rank
     python scripts/linear_optimization_loto.py --exclude_group grad_based --output_suffix no_grad_based
+    python scripts/linear_optimization_loto.py --zero_mean
 """
 import sys
 from pathlib import Path
@@ -188,9 +189,15 @@ def linear_optimization_single_fold(metrics_train, performance_train,
 
 def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
                 metric_names, n_iterations=1000, lr=0.01,
-                patience=50, convergence_threshold=1e-4):
+                patience=50, convergence_threshold=1e-4,
+                zero_mean=False):
     """
     Run Leave-One-Task-Out cross-validation.
+
+    Args:
+        zero_mean: If True, subtract the training mean from target variable
+                   before optimization. This makes the model predict deviation
+                   from the mean rather than absolute performance.
 
     Returns:
         results: Dictionary with fold results and aggregate metrics
@@ -243,6 +250,14 @@ def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
         metrics_val_raw = metrics_array[val_indices]
         performance_val = performance_array[val_indices]
 
+        # Zero-mean normalization of target variable (if enabled)
+        # Use training mean for both train and val to avoid leakage
+        train_target_mean = 0.0
+        if zero_mean:
+            train_target_mean = np.mean(performance_train)
+            performance_train = performance_train - train_target_mean
+            performance_val = performance_val - train_target_mean
+
         # Normalize using ONLY training data statistics (no leakage)
         metrics_train, min_vals, max_vals = normalize_metrics(metrics_train_raw)
         metrics_val = normalize_metrics_with_stats(metrics_val_raw, min_vals, max_vals)
@@ -270,7 +285,7 @@ def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
         fold_coefficients.append(coefficients)
 
         # Store fold results
-        fold_results.append({
+        fold_result = {
             'fold': fold_idx,
             'held_out_task': held_out_task,
             'n_train_pairs': len(train_indices),
@@ -279,7 +294,10 @@ def run_loto_cv(metrics_array, performance_array, pair_names, all_tasks,
             'val_r': float(val_r),
             'n_iterations': int(n_iters),
             'coefficients': {name: float(coef) for name, coef in zip(metric_names, coefficients)}
-        })
+        }
+        if zero_mean:
+            fold_result['train_target_mean'] = float(train_target_mean)
+        fold_results.append(fold_result)
 
     # Aggregate results
     print()
@@ -347,6 +365,10 @@ def main():
                         help='Exclude a predefined group of metrics (eff_rank, grad_based, activation, subspace, task_vector)')
     parser.add_argument('--output_suffix', type=str, default='',
                         help='Suffix to add to output directory name')
+    parser.add_argument('--zero_mean', action='store_true',
+                        help='Zero-mean normalize the target variable per method before optimization. '
+                             'This subtracts the training mean from both train and val targets, '
+                             'making the model predict deviation from mean rather than absolute performance.')
     args = parser.parse_args()
 
     # Determine which metrics to exclude
@@ -361,6 +383,8 @@ def main():
     # Output directory with optional suffix
     if args.output_suffix:
         output_dir = Path(f'/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_{args.output_suffix}')
+    elif args.zero_mean:
+        output_dir = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage_zero_mean')
     else:
         output_dir = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage')
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -374,6 +398,11 @@ def main():
 
     if exclude_metrics:
         print(f"EXCLUDING METRICS: {sorted(exclude_metrics)}")
+        print()
+
+    if args.zero_mean:
+        print("ZERO-MEAN NORMALIZATION: Enabled")
+        print("  Target variable will be centered using training mean per fold")
         print()
 
     # Load metrics data
@@ -443,7 +472,8 @@ def main():
             n_iterations=1000,
             lr=0.01,
             patience=50,
-            convergence_threshold=1e-4
+            convergence_threshold=1e-4,
+            zero_mean=args.zero_mean
         )
 
         all_results[method] = results
@@ -459,6 +489,7 @@ def main():
     # Save combined results with metadata
     combined_results = {
         'excluded_metrics': sorted(exclude_metrics) if exclude_metrics else [],
+        'zero_mean_normalization': args.zero_mean,
         'n_metrics_used': len(metric_names),
         'metrics_used': metric_names,
         'methods': all_results
@@ -471,6 +502,8 @@ def main():
     print("SUMMARY: LOTO Cross-Validation Results")
     if exclude_metrics:
         print(f"(Excluded: {args.exclude_group or 'custom'} - {len(exclude_metrics)} metrics)")
+    if args.zero_mean:
+        print("(Zero-mean normalization enabled)")
     print("="*70)
     print()
     print(f"{'Method':<15} {'Train r':<12} {'Val r':<12} {'Val r std':<12}")

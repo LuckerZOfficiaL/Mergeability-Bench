@@ -10,7 +10,7 @@ defaults:
   - hydra: default
   - nn: default
   - train: default
-  - merger: weight_avg # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
+  - merger: isotropic # iso-cts, isotropic, tsv, task_arithmetic, weight_avg, dummy (just uses pretrained), see all options in ./conf/merger
   - benchmark: N20 # N14, N8, N20, N2
   - override hydra/launcher: basic # basic
   - override hydra/job_logging: none
@@ -68,7 +68,7 @@ mergeability:
   rot_sym_align: false # Whether to perform rotation symmetry alignment before computing the mergeability metrics
 
   # Activation-based metrics configuration
-  n_calibration_samples: 10  # Number of samples per dataset for calibration, for N8 it's 80 samples.
+  n_calibration_samples: 2  # Number of samples per dataset for calibration, for N8 it's 80 samples.
   calibration_batch_size: 32  # Batch size for processing calibration data
   calibration_random_seed: 42  # Random seed for reproducible calibration sampling
   activation_layer_name: 'model.visual.transformer.resblocks.11'  # Layer to extract activations from

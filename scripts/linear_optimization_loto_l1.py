@@ -141,9 +141,14 @@ def linear_optimization_single_fold_l1(metrics_train, performance_train,
 
 def run_loto_cv_l1(metrics_array, performance_array, pair_names, all_tasks,
                    metric_names, lambda_l1=0.1, n_iterations=1000, lr=0.01,
-                   patience=50, convergence_threshold=1e-4):
+                   patience=50, convergence_threshold=1e-4, zero_mean=False):
     """
     Run Leave-One-Task-Out cross-validation with L1 regularization.
+
+    Args:
+        zero_mean: If True, subtract the training mean from target variable
+                   before optimization. This makes the model predict deviation
+                   from the mean rather than absolute performance.
 
     Returns:
         results: Dictionary with fold results and aggregate metrics
@@ -198,6 +203,14 @@ def run_loto_cv_l1(metrics_array, performance_array, pair_names, all_tasks,
         metrics_val_raw = metrics_array[val_indices]
         performance_val = performance_array[val_indices]
 
+        # Zero-mean normalization of target variable (if enabled)
+        # Use training mean for both train and val to avoid leakage
+        train_target_mean = 0.0
+        if zero_mean:
+            train_target_mean = np.mean(performance_train)
+            performance_train = performance_train - train_target_mean
+            performance_val = performance_val - train_target_mean
+
         # Normalize using ONLY training data statistics (no leakage)
         metrics_train, min_vals, max_vals = normalize_metrics(metrics_train_raw)
         metrics_val = normalize_metrics_with_stats(metrics_val_raw, min_vals, max_vals)
@@ -227,7 +240,7 @@ def run_loto_cv_l1(metrics_array, performance_array, pair_names, all_tasks,
         fold_nonzero_counts.append(n_nonzero)
 
         # Store fold results
-        fold_results.append({
+        fold_result = {
             'fold': fold_idx,
             'held_out_task': held_out_task,
             'n_train_pairs': len(train_indices),
@@ -237,7 +250,10 @@ def run_loto_cv_l1(metrics_array, performance_array, pair_names, all_tasks,
             'n_iterations': int(n_iters),
             'n_nonzero_coefficients': int(n_nonzero),
             'coefficients': {name: float(coef) for name, coef in zip(metric_names, coefficients)}
-        })
+        }
+        if zero_mean:
+            fold_result['train_target_mean'] = float(train_target_mean)
+        fold_results.append(fold_result)
 
     # Aggregate results
     print()
@@ -307,6 +323,10 @@ def run_loto_cv_l1(metrics_array, performance_array, pair_names, all_tasks,
 def main():
     parser = argparse.ArgumentParser(description='L1-Regularized LOTO Cross-Validation')
     parser.add_argument('--lambda_l1', type=float, default=0.1, help='L1 regularization strength')
+    parser.add_argument('--zero_mean', action='store_true',
+                        help='Zero-mean normalize the target variable per method before optimization. '
+                             'This subtracts the training mean from both train and val targets, '
+                             'making the model predict deviation from mean rather than absolute performance.')
     args = parser.parse_args()
 
     lambda_l1 = args.lambda_l1
@@ -314,7 +334,12 @@ def main():
     # Configuration
     metrics_path = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/mergeability/ViT-B-16/pairwise_metrics_N20.json')
     results_base_path = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/ViT-B-16')
-    output_dir = Path(f'/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_l1_lambda{lambda_l1}')
+
+    # Output directory
+    if args.zero_mean:
+        output_dir = Path(f'/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_l1_lambda{lambda_l1}_zero_mean')
+    else:
+        output_dir = Path(f'/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_l1_lambda{lambda_l1}')
     output_dir.mkdir(parents=True, exist_ok=True)
 
     merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic']
@@ -323,6 +348,11 @@ def main():
     print(f"L1-Regularized Linear Optimization with LOTO CV (lambda={lambda_l1})")
     print("="*70)
     print()
+
+    if args.zero_mean:
+        print("ZERO-MEAN NORMALIZATION: Enabled")
+        print("  Target variable will be centered using training mean per fold")
+        print()
 
     # Load metrics data
     print("Loading data...")
@@ -382,7 +412,8 @@ def main():
             n_iterations=2000,  # More iterations for L1 convergence
             lr=0.01,
             patience=100,  # More patience for sparse solutions
-            convergence_threshold=1e-5
+            convergence_threshold=1e-5,
+            zero_mean=args.zero_mean
         )
 
         all_results[method] = results
@@ -395,13 +426,20 @@ def main():
         print(f"Saved results to: {method_output_file}")
         print()
 
-    # Save combined results
+    # Save combined results with metadata
+    combined_results = {
+        'lambda_l1': lambda_l1,
+        'zero_mean_normalization': args.zero_mean,
+        'methods': all_results
+    }
     combined_output_file = output_dir / 'all_methods_loto_results.json'
     with open(combined_output_file, 'w') as f:
-        json.dump(all_results, f, indent=2)
+        json.dump(combined_results, f, indent=2)
 
     print("="*70)
     print("SUMMARY: L1-Regularized LOTO Cross-Validation Results")
+    if args.zero_mean:
+        print("(Zero-mean normalization enabled)")
     print("="*70)
     print()
     print(f"{'Method':<15} {'Train r':<12} {'Val r':<12} {'Val r std':<12} {'Nonzero':<12}")
