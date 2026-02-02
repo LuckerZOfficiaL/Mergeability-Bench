@@ -10,14 +10,15 @@
 #   - lambda_moderate_update: 0.01
 #   - enable_grad_magnitude: true
 #   - lambda_grad_magnitude: 0.001
+#   etc.
 #
 # Models will be saved to:
-#   /home/ubuntu/thesis/MM/model-merging/models/ViT-B-16/{dataset}_moderate_update_grad_magnitude/model.pt
+#   /home/ubuntu/thesis/MM/Mergebaility/checkpoints/ViT-B-16/{dataset}XXX/model.pt
 
 set -e  # Exit on error
 
 # List of N20 datasets
-datasets=(
+datasets1=(
     "Cars"
     "CIFAR10"
     "CIFAR100"
@@ -28,6 +29,9 @@ datasets=(
     "FER2013"
     "Flowers102"
     "Food101"
+)
+
+datasets2=(
     "GTSRB"
     "KMNIST"
     "MNIST"
@@ -40,8 +44,11 @@ datasets=(
     "STL10"
 )
 
+
+datasets=("${datasets2[@]}") #choose between the two task partitions
+
 # Log file
-LOG_DIR="/home/ubuntu/thesis/MM/model-merging/logs"
+LOG_DIR="/home/ubuntu/thesis/MM/Mergeability/logs"
 mkdir -p "$LOG_DIR"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="$LOG_DIR/finetune_all_n20_${TIMESTAMP}.log"

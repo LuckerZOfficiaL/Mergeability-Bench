@@ -27,8 +27,13 @@ regularization:
   # R3: Gradient Magnitude Regularization
   # Encourages moderate gradient magnitudes (not too large)
   # All merge methods show negative coefficients for gradient_l2_distance
-  enable_grad_magnitude: true  # Enable/disable R3 regularization
+  enable_grad_magnitude: false  # Enable/disable R3 regularization
   lambda_grad_magnitude: 1  # Weight for R3 regularization term
+
+  enable_tv_subspace_penalty: true
+  tv_penalty_singular_vectors: "V" # can be U or V 
+  subspace_top_k: 10 # number of top directions to keep
+  lambda_tv_subspace: 0.01 # strength coefficient
 
 restore:
   ckpt_or_run_path: null

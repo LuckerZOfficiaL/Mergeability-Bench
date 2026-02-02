@@ -32,6 +32,50 @@ pylogger = logging.getLogger(__name__)
 torch.set_float32_matmul_precision("high")
 
 
+def compute_subspace_projectors(
+    pretrained_state_dict: Dict[str, torch.Tensor],
+    k: int,
+    use_right_singular_vectors: bool = True,
+) -> Dict[str, torch.Tensor]:
+    """Compute truncated singular vectors for each 2D weight matrix.
+
+    Args:
+        pretrained_state_dict: State dict of pretrained encoder weights
+        k: Number of top-k singular vectors to keep
+        use_right_singular_vectors: If True, use V (right); if False, use U (left)
+
+    Returns:
+        Dict mapping parameter names to truncated singular vectors (Vk or Uk)
+    """
+    subspace_projectors = {}
+
+    for name, param in pretrained_state_dict.items():
+        if param.ndim == 2:  # Only process 2D matrices
+            # Perform SVD: W = U @ S @ V^T
+            U, S, Vh = torch.linalg.svd(param.float(), full_matrices=False)
+            # U shape: (out_features, min(out, in))
+            # S shape: (min(out, in),)
+            # Vh shape: (min(out, in), in_features)
+
+            # Truncate to top-k
+            actual_k = min(k, S.shape[0])
+
+            if use_right_singular_vectors:
+                # V: right singular vectors, Vh[:k] gives top-k rows of V^T
+                # Vk shape: (k, in_features)
+                Vk = Vh[:actual_k, :]
+                subspace_projectors[name] = Vk
+            else:
+                # U: left singular vectors, U[:, :k] gives top-k columns
+                # Uk shape: (out_features, k), we transpose to (k, out_features)
+                Uk = U[:, :actual_k].T
+                subspace_projectors[name] = Uk
+
+            pylogger.debug(f"Computed SVD for {name}: shape={param.shape}, k={actual_k}")
+
+    return subspace_projectors
+
+
 def run(cfg: DictConfig):
     seed_index_everything(cfg)
 
@@ -72,16 +116,39 @@ def run(cfg: DictConfig):
 
     # Configure mergeability regularization if enabled
     if hasattr(cfg.train, 'regularization'):
+        # Compute subspace projectors if TV subspace penalty is enabled
+        subspace_projectors = None
+        enable_tv_subspace = cfg.train.regularization.get('enable_tv_subspace_penalty', False)
+        tv_singular_vectors = cfg.train.regularization.get('tv_penalty_singular_vectors', 'V')
+        subspace_k = cfg.train.regularization.get('subspace_top_k', 10)
+        lambda_tv_subspace = cfg.train.regularization.get('lambda_tv_subspace', 0.0)
+
+        if enable_tv_subspace:
+            pylogger.info(f"Computing SVD for TV subspace penalty (k={subspace_k}, vectors={tv_singular_vectors})...")
+            use_right = (tv_singular_vectors == "V")
+            subspace_projectors = compute_subspace_projectors(
+                pretrained_state_dict=pretrained_state_dict,
+                k=subspace_k,
+                use_right_singular_vectors=use_right,
+            )
+            pylogger.info(f"Computed subspace projectors for {len(subspace_projectors)} 2D matrices")
+
         model.set_regularization_config(
             pretrained_state_dict=pretrained_state_dict,
             enable_moderate_update=cfg.train.regularization.enable_moderate_update,
             lambda_moderate_update=cfg.train.regularization.lambda_moderate_update,
             enable_grad_magnitude=cfg.train.regularization.enable_grad_magnitude,
             lambda_grad_magnitude=cfg.train.regularization.lambda_grad_magnitude,
+            enable_tv_subspace_penalty=enable_tv_subspace,
+            tv_penalty_singular_vectors=tv_singular_vectors,
+            subspace_k=subspace_k,
+            lambda_tv_subspace=lambda_tv_subspace,
+            subspace_projectors=subspace_projectors,
         )
         pylogger.info("Regularization configured:")
         pylogger.info(f"  R2 (Moderate Update): {cfg.train.regularization.enable_moderate_update}, λ={cfg.train.regularization.lambda_moderate_update}")
         pylogger.info(f"  R3 (Grad Magnitude): {cfg.train.regularization.enable_grad_magnitude}, λ={cfg.train.regularization.lambda_grad_magnitude}")
+        pylogger.info(f"  TV Subspace Penalty: {enable_tv_subspace}, k={subspace_k}, vectors={tv_singular_vectors}, λ={lambda_tv_subspace}")
 
     dataset = instantiate(
         cfg.dataset,
@@ -115,17 +182,23 @@ def run(cfg: DictConfig):
         reg_parts = []
         moderate_update_enabled = cfg.train.regularization.enable_moderate_update
         grad_magnitude_enabled = cfg.train.regularization.enable_grad_magnitude
+        tv_subspace_enabled = cfg.train.regularization.get('enable_tv_subspace_penalty', False)
 
         if moderate_update_enabled:
             reg_parts.append("moderate_update")
         if grad_magnitude_enabled:
             reg_parts.append("grad_magnitude")
+        if tv_subspace_enabled:
+            reg_parts.append("tv_subspace")
 
         if reg_parts:
             reg_suffix = "_" + "_".join(reg_parts)
 
             # Determine parent folder based on which regularizations are enabled
-            if moderate_update_enabled and grad_magnitude_enabled:
+            if tv_subspace_enabled:
+                # TV subspace penalty gets its own dedicated folder
+                parent_folder = "weight_space_subspace_penalty"
+            elif moderate_update_enabled and grad_magnitude_enabled:
                 parent_folder = "both"
             elif moderate_update_enabled:
                 parent_folder = "moderate_update"

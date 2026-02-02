@@ -389,7 +389,7 @@ def main():
         output_dir = Path('/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_no_leakage')
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic']
+    merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic', 'ties']
 
     print("="*70)
     print("Linear Optimization with LOTO Cross-Validation")

@@ -56,6 +56,13 @@ class ImageClassifier(pl.LightningModule):
         self.enable_grad_magnitude = False
         self.lambda_grad_magnitude = 0.0
 
+        # TV subspace penalty configuration
+        self.enable_tv_subspace_penalty = False
+        self.tv_penalty_singular_vectors = "V"  # "V" or "U"
+        self.subspace_k = 10
+        self.lambda_tv_subspace = 0.0
+        self.subspace_projectors = None  # Dict[name, Vk or Uk tensor]
+
     def set_encoder(self, encoder: torch.nn.Module):
         """Set the encoder of the model.
 
@@ -144,6 +151,41 @@ class ImageClassifier(pl.LightningModule):
                     reg_loss += self.lambda_grad_magnitude * grad_magnitude_loss
                     self.log_fn(f"reg/grad_magnitude/{self.task_name}", grad_magnitude_loss.detach())
 
+            # TV Subspace Penalty Regularization
+            # Penalize task vectors that go outside the dominant top-k subspace
+            if self.enable_tv_subspace_penalty and self.lambda_tv_subspace > 0 and self.subspace_projectors is not None:
+                tv_subspace_loss = 0.0
+                for name, param in self.encoder.named_parameters():
+                    if name in self.subspace_projectors and name in self.pretrained_state_dict and param.requires_grad:
+                        pretrained_param = self.pretrained_state_dict[name].to(param.device)
+                        task_vector = param - pretrained_param  # shape: (out_features, in_features)
+
+                        # Get the truncated singular vectors (Vk or Uk)
+                        Sk = self.subspace_projectors[name].to(param.device)  # shape: (k, dim)
+
+                        if self.tv_penalty_singular_vectors == "V":
+                            # V case: penalty = ||task_vector @ (I - Vk^T @ Vk)||_F^2
+                            # Vk shape: (k, in_features), task_vector shape: (out, in)
+                            # task_vector @ Vk^T gives (out, k), then @ Vk gives (out, in)
+                            # projection onto subspace: task_vector @ Vk^T @ Vk
+                            # orthogonal component: task_vector - projection
+                            projection = task_vector @ Sk.T @ Sk  # (out, in)
+                            orthogonal_component = task_vector - projection
+                        else:
+                            # U case: penalty = ||(I - Uk @ Uk^T) @ task_vector||_F^2
+                            # Uk shape: (k, out_features), task_vector shape: (out, in)
+                            # Uk^T @ task_vector gives (k, in), then Uk @ that gives (out, in)
+                            # projection onto subspace: Uk^T @ Uk @ task_vector
+                            projection = Sk.T @ Sk @ task_vector  # (out, in)
+                            orthogonal_component = task_vector - projection
+
+                        # Frobenius norm squared
+                        tv_subspace_loss += torch.sum(orthogonal_component ** 2)
+
+                if tv_subspace_loss > 0:
+                    reg_loss += self.lambda_tv_subspace * tv_subspace_loss
+                    self.log_fn(f"reg/tv_subspace/{self.task_name}", tv_subspace_loss.detach())
+
             if reg_loss > 0:
                 loss = loss + reg_loss
                 self.log_fn(f"reg/total/{self.task_name}", reg_loss.detach())
@@ -209,6 +251,11 @@ class ImageClassifier(pl.LightningModule):
         lambda_moderate_update: float = 0.0,
         enable_grad_magnitude: bool = False,
         lambda_grad_magnitude: float = 0.0,
+        enable_tv_subspace_penalty: bool = False,
+        tv_penalty_singular_vectors: str = "V",
+        subspace_k: int = 10,
+        lambda_tv_subspace: float = 0.0,
+        subspace_projectors: Optional[Dict[str, torch.Tensor]] = None,
     ):
         """Configure mergeability regularization.
 
@@ -218,6 +265,11 @@ class ImageClassifier(pl.LightningModule):
             lambda_moderate_update: Weight for R2 regularization
             enable_grad_magnitude: Enable R3 (gradient magnitude) regularization
             lambda_grad_magnitude: Weight for R3 regularization
+            enable_tv_subspace_penalty: Enable task vector subspace penalty
+            tv_penalty_singular_vectors: "V" for right singular vectors, "U" for left
+            subspace_k: Number of top-k singular vectors to keep
+            lambda_tv_subspace: Weight for TV subspace penalty
+            subspace_projectors: Dict mapping param names to Vk or Uk tensors
         """
         # Store as CPU tensors, will be moved to device during training
         self.pretrained_state_dict = pretrained_state_dict
@@ -225,6 +277,13 @@ class ImageClassifier(pl.LightningModule):
         self.lambda_moderate_update = lambda_moderate_update
         self.enable_grad_magnitude = enable_grad_magnitude
         self.lambda_grad_magnitude = lambda_grad_magnitude
+
+        # TV subspace penalty config
+        self.enable_tv_subspace_penalty = enable_tv_subspace_penalty
+        self.tv_penalty_singular_vectors = tv_penalty_singular_vectors
+        self.subspace_k = subspace_k
+        self.lambda_tv_subspace = lambda_tv_subspace
+        self.subspace_projectors = subspace_projectors
 
     def on_test_epoch_end(self):
         # Compute and log the test accuracy

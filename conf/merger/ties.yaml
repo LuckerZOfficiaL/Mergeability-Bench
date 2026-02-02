@@ -1,0 +1,6 @@
+_target_: model_merging.merger.ties_merger.TIESMerger
+scaling_coefficient: 0.3
+k: 0.2  # Keep top 20% of parameters by magnitude
+resolve_method: "mass"  # Sign resolution via majority vote
+merge_func: "mean"  # Disjoint mean aggregation
+device: ${device}

@@ -342,7 +342,7 @@ def main():
         output_dir = Path(f'/home/ubuntu/thesis/MM/Mergeability-Bench/results/metric_linear_optimization/loto_cv_l1_lambda{lambda_l1}')
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic']
+    merge_methods = ['weight_avg', 'arithmetic', 'tsv', 'isotropic', 'ties']
 
     print("="*70)
     print(f"L1-Regularized Linear Optimization with LOTO CV (lambda={lambda_l1})")
