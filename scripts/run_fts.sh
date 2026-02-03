@@ -48,7 +48,7 @@ datasets2=(
 datasets=("${datasets2[@]}") #choose between the two task partitions
 
 # Log file
-LOG_DIR="/home/ubuntu/thesis/MM/Mergeability/logs"
+LOG_DIR="/home/ubuntu/thesis/MM/Mergeability-Bench/logs"
 mkdir -p "$LOG_DIR"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="$LOG_DIR/finetune_all_n20_${TIMESTAMP}.log"

@@ -353,8 +353,15 @@ def run(cfg: DictConfig):
     pylogger.info(f"Benchmark has {n_datasets} datasets: {[d.name for d in datasets]}")
     pylogger.info(f"Total pairs to evaluate: {n_pairs}")
 
+    # Determine results path for checking existing results
+    merger_name = cfg.merger._target_.split(".")[-2].replace("_merger", "")
+    reg_suffix = getattr(cfg.misc, 'reg_suffix', '')
+    merger_name_with_suffix = f"{merger_name}{reg_suffix}" if reg_suffix else merger_name
+    results_path = Path(cfg.misc.results_path) / merger_name_with_suffix
+
     all_results = {}
     pair_idx = 0
+    skipped = 0
 
     for i in range(n_datasets):
         for j in range(i + 1, n_datasets):
@@ -362,6 +369,16 @@ def run(cfg: DictConfig):
             dataset_i = datasets[i]
             dataset_j = datasets[j]
             pair_name = f"{dataset_i.name}__{dataset_j.name}"
+
+            # Check if result already exists - skip if so
+            alignment_suffix = "_rot_aligned" if cfg.alignment else ""
+            pair_file = results_path / f"pair_{pair_name}{alignment_suffix}.json"
+            if pair_file.exists():
+                pylogger.info(f"[{pair_idx}/{n_pairs}] Skipping {pair_name} (already exists)")
+                with open(pair_file, 'r') as f:
+                    all_results[pair_name] = json.load(f)
+                skipped += 1
+                continue
 
             pylogger.info(f"\n{'='*60}")
             pylogger.info(f"[{pair_idx}/{n_pairs}] Evaluating pair: {pair_name}")
@@ -377,6 +394,8 @@ def run(cfg: DictConfig):
             except Exception as e:
                 pylogger.error(f"Failed to evaluate pair {pair_name}: {e}")
                 all_results[pair_name] = {"error": str(e)}
+
+    pylogger.info(f"\nSkipped {skipped} existing pairs, evaluated {n_pairs - skipped} new pairs")
 
     # Save summary of all pairwise results
     # Extract merger name from target (e.g., "model_merging.merger.weight_avg_merger.WeightAvgMerger" -> "weight_avg")
